@@ -31,29 +31,87 @@ services:
     container_name: cassandra
     ports:
       - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=cassandra-cluster
 
-  spark:
+  # ==================== SPARK MASTER ====================
+  spark-master:
     image: apache/spark:3.5.0
-    container_name: spark
+    container_name: spark-master
+    ports:
+      - "8080:8080"   # Web UI
+      - "7077:7077"   # Master URL
+    environment:
+      - SPARK_MODE=master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+
+  # ==================== SPARK WORKER ====================
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: spark-worker
     depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+    ports:
+      - "8081:8081"   # Worker Web UI
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  # ==================== SPARK SUBMIT (DRIVER) ====================
+  spark-submit:
+    image: apache/spark:3.5.0
+    container_name: spark-submit
+    user: root
+    depends_on:
+      - spark-master
       - kafka
       - cassandra
     volumes:
       - ./app:/app
+      - spark-ivy-cache:/home/spark/.ivy2
     environment:
-      - SPARK_MODE=driver
-    command: bash -c "sleep 25 && /opt/spark/bin/pyspark"
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    command: >
+      bash -c "
+        echo '=== Fixing Ivy cache permissions ===' &&
+        mkdir -p /home/spark/.ivy2/cache &&
+        chown -R 185:185 /home/spark/.ivy2 &&
+        chmod -R 777 /home/spark/.ivy2 &&
 
-  # producer:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: producer
-  #   depends_on:
-  #     - kafka
-  #   volumes:
-  #     - ./data:/data
-  #     - ./app:/app
-  #   environment:
-  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-  #   command: bash -c "sleep 35 && python /app/producer.py"
+        echo '=== Fixing script permissions ===' &&
+        chmod +x /app/spark_streaming.py &&
+
+        echo '=== Waiting for Spark Master...' &&
+        sleep 35 &&
+
+        echo '=== Submitting job to Spark Cluster ===' &&
+        exec su -s /bin/bash spark -c \"
+          /opt/spark/bin/spark-submit \\
+            --master spark://spark-master:7077 \\
+            --deploy-mode client \\
+            --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 \\
+            /app/spark_streaming.py
+        \"
+      "
+
+  # ==================== PRODUCER ====================
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: producer
+    depends_on:
+      - kafka
+    volumes:
+      - ./data:/data
+      - ./app:/app
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    command: bash -c "sleep 40 && python /app/producer.py"
+
+# ==================== VOLUME ====================
+volumes:
+  spark-ivy-cache:
