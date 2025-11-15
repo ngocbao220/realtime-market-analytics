@@ -37,7 +37,7 @@ services:
       interval: 5s
       timeout: 10s
       retries: 10
-
+    restart: unless-stopped
   # ==================== KAFKA UI ====================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
