@@ -1,0 +1,1 @@
+def start_tickers_pipeline():
