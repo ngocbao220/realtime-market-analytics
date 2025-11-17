@@ -22,7 +22,7 @@ def start_trades_pipeline(spark):
     
     # 4. Ghi vào ClickHouse (Streaming) qua foreachBatch
     query_ch = df_clean.writeStream.foreachBatch(
-        lambda batch_df, batch_id: write_clickhouse_batch(batch_df, table_name="trades", user=USER, password=PASSWORD)
+        lambda batch_df, batch_id: write_clickhouse_batch(batch_df, batch_id, table_name="trades", user=USER, password=PASSWORD)
     ).start()
     
     return query_ch
