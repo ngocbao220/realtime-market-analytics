@@ -35,6 +35,7 @@ def read_kafka_stream(spark: SparkSession, kafka_broker: str, topic: str):
         .option("subscribe", topic)
         .option("startingOffsets", "earliest")   # "earliest" hoặc "latest"
         .option("failOnDataLoss", "false")       # quan trọng: không fail nếu mất data
+        .option("maxOffsetsPerTrigger", "200")  # giới hạn số bản ghi mỗi trigger
         .load()
     )
 
