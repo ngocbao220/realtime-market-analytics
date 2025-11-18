@@ -1,3 +1,4 @@
 kafka
 confluent_kafka
 websockets
+clickhouse_driver

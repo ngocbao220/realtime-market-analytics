@@ -100,7 +100,9 @@ services:
 
   # ==================== SPARK SUBMIT ====================
   spark-submit:
-    image: apache/spark:3.5.0
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     container_name: spark-submit
     user: root
     depends_on:

@@ -2,7 +2,7 @@ from ingestion.kafka_reader import read_kafka_stream
 from transform.trades_transform import transform_trades
 from sinks.clickhouse_writer import write_clickhouse_batch
 from sinks.parquet_writer import write_parquet_stream
-
+from sinks.console_writer import write_console_stream
 from config.setting import *
 
 def start_trades_pipeline(spark):
@@ -11,18 +11,20 @@ def start_trades_pipeline(spark):
     
     # 2. Clean & Transform
     df_clean = transform_trades(df_raw)
+
+    # 3. Log Console để quan sát dữ liệu (Đã check rồi)
+    write_console_stream(df=df_clean, table="trades", col_select=["Symbol", "Price", "Quantity", "Side", "TradeValue", "TradeTime"])
     
-    # 3. Ghi vào Parquet (Streaming)
+    # 4. Ghi vào Parquet (Streaming) (Đã check rồi)
     write_parquet_stream(
         df=df_clean,
         path=f"{OUTPUT_PATH}/trades",
         checkpoint=f"{CHECKPOINT_DIR}/trades",
         partition_cols=["Symbol", "Year", "Month", "Day"]
     )
+    # # 5. Ghi vào ClickHouse (Streaming) qua foreachBatch (Chưa check)
+    # query_ch = df_clean.writeStream.foreachBatch(
+    #     lambda batch_df, batch_id: write_clickhouse_batch(batch_df, batch_id, table_name="trades", user=USER, password=PASSWORD)
+    # ).start()
     
-    # 4. Ghi vào ClickHouse (Streaming) qua foreachBatch
-    query_ch = df_clean.writeStream.foreachBatch(
-        lambda batch_df, batch_id: write_clickhouse_batch(batch_df, batch_id, table_name="trades", user=USER, password=PASSWORD)
-    ).start()
-    
-    return query_ch
+    # return query_ch

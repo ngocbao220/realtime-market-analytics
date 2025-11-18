@@ -1,3 +1,4 @@
+from config.setting import PROCESSING_TIME
 def write_parquet_stream(df, path, checkpoint, partition_cols=None):
     writer = (
         df.writeStream
@@ -13,7 +14,7 @@ def write_parquet_stream(df, path, checkpoint, partition_cols=None):
 
     query = (
         writer
-        .trigger(processingTime="5 seconds")
+        .trigger(processingTime=PROCESSING_TIME)
         .start()
     )
 

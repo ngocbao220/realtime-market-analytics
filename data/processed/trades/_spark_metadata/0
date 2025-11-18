@@ -1,4 +1,0 @@
-v1
-{"path":"file:///data/processed/trades/Symbol=BTCUSDT/Year=2025/Month=11/Day=17/part-00000-afe3db52-75d0-48e4-a19d-57dfffee8ef2.c000.snappy.parquet","size":3214,"isDir":false,"modificationTime":1763362247839,"blockReplication":1,"blockSize":33554432,"action":"add"}
-{"path":"file:///data/processed/trades/Symbol=BTCUSDT/Year=2025/Month=11/Day=17/part-00001-087b3dc6-cd7d-404b-89e9-959708fb341a.c000.snappy.parquet","size":4242,"isDir":false,"modificationTime":1763362247839,"blockReplication":1,"blockSize":33554432,"action":"add"}
-{"path":"file:///data/processed/trades/Symbol=BTCUSDT/Year=2025/Month=11/Day=17/part-00002-22ddd304-92df-4394-aa4b-a955bd89740e.c000.snappy.parquet","size":3003,"isDir":false,"modificationTime":1763362248305,"blockReplication":1,"blockSize":33554432,"action":"add"}
