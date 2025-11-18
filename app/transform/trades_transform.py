@@ -38,10 +38,9 @@ def transform_trades(trades_raw_df):
             col("data.q").cast(DoubleType()).alias("Quantity"),
             (col("data.E") / 1000).cast("timestamp").alias("EventTime"),
             (col("data.T") / 1000).cast("timestamp").alias("TradeTime"),
-            #clickhouse nhận  (0/1) nên phải cast về int
-            col("data.m").cast("int").alias("IsBuyerMaker")
+            col("data.m").alias("IsBuyerMaker")
         )
-        .withColumn("Side", when(col("IsBuyerMaker") == 1, "SELL").otherwise("BUY"))
+        .withColumn("Side", when(col("IsBuyerMaker") == True, "SELL").otherwise("BUY"))
         .withColumn("TradeValue", col("Price") * col("Quantity"))
         .filter(col("Price") > 0)
         .filter(col("Quantity") > 0)
