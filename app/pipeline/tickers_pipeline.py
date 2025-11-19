@@ -9,19 +9,27 @@ import traceback
 
 def start_tickers_pipeline(spark):
     # 1. Read and clean df
-    df_raw = read_kafka_stream(spark, KAFKA_BROKER, TOPIC_TICKERS)
+    df_raw = (spark.readStream
+            .format("kafka")
+            .option("kafka.bootstrap.servers", KAFKA_BROKER)
+            .option("subscribe", TOPIC_TICKERS)
+            .option("startingOffsets", "earliest")
+            .option("failOnDataLoss", "false")
+            # --- QUAN TRỌNG: Giới hạn cứng 200 dòng ---
+            .option("maxOffsetsPerTrigger", 5000) 
+            .load())
     df_clean = transform_tickers(df_raw)
     
     # 2. Write console log to observation
-    write_console_stream(df_clean, "tickers", ["symbol","close_price","volume","event_time","open_time","close_time"])
+    #write_console_stream(df_clean, "tickers", ["symbol","close_price","volume","event_time","open_time","close_time"])
 
     # 3. Write parquet to store further
-    write_parquet_stream(
-        df_clean,
-        path=f"{OUTPUT_PATH}/tickers",
-        checkpoint=f"{CHECKPOINT_DIR}/tickers",
-        partition_cols=["symbol","Year","Month","Day"]
-    )
+    #write_parquet_stream(
+    #    df_clean,
+    #    path=f"{OUTPUT_PATH}/tickers",
+    #    checkpoint=f"{CHECKPOINT_DIR}/tickers",
+    #    partition_cols=["symbol","Year","Month","Day"]
+    # )
 
     # 4. Write clickhouse to process real-time
     # Create table if not exists
