@@ -38,6 +38,7 @@ services:
       timeout: 10s
       retries: 10
     restart: unless-stopped
+
   # ==================== KAFKA UI ====================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -49,7 +50,7 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
 
-  # ==================== CLICKHOUSE (DB) ====================
+  # ==================== CLICKHOUSE ====================
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
@@ -78,7 +79,7 @@ services:
     environment:
       - SPARK_MODE=master
     volumes:
-      - ./data/processed:/data/processed  # Thêm dòng này
+      - ./data/processed:/data/processed
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
 
   # ==================== SPARK WORKER ====================
@@ -93,7 +94,7 @@ services:
       - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=2g
     volumes:
-      - ./data/processed:/data/processed  # Thêm dòng này
+      - ./data/processed:/data/processed
     ports:
       - "8081:8081"
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
@@ -111,9 +112,9 @@ services:
       - clickhouse
     volumes:
       - ./app:/app
-      - ./jars:/extra-jars          # không ghi đè thư mục jars của Spark
-      - ./data/processed:/data/processed  # Thêm dòng này
-      - ./checkpoints:/checkpoints  # Thêm checkpoint
+      - ./jars:/extra-jars
+      - ./data/processed:/data/processed
+      - ./checkpoints:/checkpoints
     environment:
       SPARK_MASTER_URL: spark://spark-master:7077
     command: >
@@ -126,17 +127,16 @@ services:
         --conf spark.executor.memory=2g
         /app/app.py
 
-  # ==================== PRODUCER (PYTHON) ====================
+  # ==================== PRODUCER ====================
   producer:
     build:
-      context: .
+      context: ./producer
       dockerfile: Dockerfile
     container_name: producer
     depends_on:
       kafka:
         condition: service_healthy
     volumes:
-      - ./data:/data
       - ./producer:/app
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -169,6 +169,21 @@ services:
       - CLICKHOUSE_DATABASE=default
     volumes:
       - ./api:/app
+
+  # ==================== DASHBOARD (STREAMLIT) ====================
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: dashboard
+    depends_on:
+      - api
+    ports:
+      - "8501:8501"
+    environment:
+      API_URL: http://api:8000
+    volumes:
+      - ./dashboard:/app
 
 volumes:
   clickhouse_data:

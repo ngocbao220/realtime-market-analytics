@@ -10,9 +10,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 import time
+import os
 
 # Config
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("API_URL", "http://api:8000")
 
 st.set_page_config(
     page_title="Binance Trading Dashboard",
@@ -597,5 +598,6 @@ st.markdown(f"""
 
 # Auto refresh
 if auto_refresh:
+    # TODO: Làm 1 nút để cập nhật theo 1s, 1 phút, 5 phút gì đó
     time.sleep(10)
     st.rerun()
