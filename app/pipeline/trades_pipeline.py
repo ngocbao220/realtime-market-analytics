@@ -1,4 +1,4 @@
-from ingestion.kafka_reader import read_kafka_stream
+from consumer.kafka_reader import read_kafka_stream
 from transform.trades_transform import transform_trades
 from sinks.clickhouse_writer import write_clickhouse_batch
 from sinks.parquet_writer import write_parquet_stream

@@ -1,4 +1,4 @@
-from ingestion.kafka_reader import read_kafka_stream
+from consumer.kafka_reader import read_kafka_stream
 from transform.orderbook_transform import orderbook_transform
 from sinks.clickhouse_writer import write_clickhouse_batch
 from sinks.console_writer import write_console_stream
@@ -7,20 +7,14 @@ from table.create_orderbook_table import create_clickhouse_table_orderbook
 from config.setting import *
 
 def start_orderbook_pipeline(spark):
-    # 1. Đọc Kafka
-    # Lưu ý: Orderbook rất nặng, cần đảm bảo read_kafka_stream đã có maxOffsetsPerTrigger
-   
-    df_raw = (spark.readStream
-            .format("kafka")
-            .option("kafka.bootstrap.servers", KAFKA_BROKER)
-            .option("subscribe", TOPIC_ORDERBOOK)
-            .option("startingOffsets", "earliest")
-            .option("failOnDataLoss", "false")
-            .option("maxOffsetsPerTrigger", 1000) 
-            .load())
+    # 1. Read and clean df
+    df_raw = read_kafka_stream(spark, KAFKA_BROKER, TOPIC_ORDERBOOK)
     df_clean = orderbook_transform(df_raw)
+
+    # 2. Write console log to observation
     write_console_stream(df_clean, "orderbook", ["symbol","event_time","bid_prices","bid_quantities","ask_prices","ask_quantities"])
-    # 3. Ghi Parquet (Lưu kho)
+    
+    # 3. Write parquet to store further
     write_parquet_stream(
        df_clean,
        path=f"{OUTPUT_PATH}/orderbook",
@@ -28,7 +22,8 @@ def start_orderbook_pipeline(spark):
        partition_cols=["symbol","Year","Month","Day"]
     )
 
-    # 4. Tạo bảng ClickHouse (nếu chưa có)
+    # 4. Write clickhouse to process real-time
+    # Create table if not exists
     try:
         create_clickhouse_table_orderbook(
             host=CLICKHOUSE_HOST,
