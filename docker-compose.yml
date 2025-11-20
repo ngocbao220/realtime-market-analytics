@@ -151,6 +151,25 @@ services:
         python /app/producer.py
       "
 
+  # ==================== API (FASTAPI) ====================
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: financial-api
+    depends_on:
+      - clickhouse
+    ports:
+      - "8000:8000"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=9000
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=12345
+      - CLICKHOUSE_DATABASE=default
+    volumes:
+      - ./api:/app
+
 volumes:
   clickhouse_data:
   clickhouse_logs:
