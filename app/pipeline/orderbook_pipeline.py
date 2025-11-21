@@ -21,12 +21,12 @@ def start_orderbook_pipeline(spark):
     df_clean = orderbook_transform(df_raw)
     #write_console_stream(df_clean, "orderbook", ["symbol","event_time","bid_prices","bid_quantities","ask_prices","ask_quantities"])
     # 3. Ghi Parquet (Lưu kho)
-    #write_parquet_stream(
-    #    df_clean,
-    #    path=f"{OUTPUT_PATH}/orderbook",
-    #    checkpoint=f"{CHECKPOINT_DIR}/orderbook",
-    #    partition_cols=["symbol","Year","Month","Day"]
-    #)
+    # write_parquet_stream(
+    #     df_clean,
+    #     path=f"{OUTPUT_PATH}/orderbook",
+    #     checkpoint=f"{CHECKPOINT_DIR}/orderbook_parquet",
+    #     partition_cols=["symbol","Year","Month","Day"]
+    # )
 
     # 4. Tạo bảng ClickHouse (nếu chưa có)
     try:

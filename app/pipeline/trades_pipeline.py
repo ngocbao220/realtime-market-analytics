@@ -15,12 +15,12 @@ def start_trades_pipeline(spark):
     #write_console_stream(df_clean, "trades", ["Symbol","Price","Quantity","Side","TradeValue","TradeTime"])
 
     # 3. Write parquet to store further
-    #write_parquet_stream(
-    #    df_clean,
-    #    path=f"{OUTPUT_PATH}/trades",
-    #    checkpoint=f"{CHECKPOINT_DIR}/trades",
-    #   partition_cols=["Symbol","Year","Month","Day"]
-    #)
+    # write_parquet_stream(
+    #     df_clean,
+    #     path=f"{OUTPUT_PATH}/trades",
+    #     checkpoint=f"{CHECKPOINT_DIR}/trades_parquet",
+    #     partition_cols=["Symbol","Year","Month","Day"]
+    # )
 
     # 4. Write clickhouse to process real-time
     # Create table if not exists
