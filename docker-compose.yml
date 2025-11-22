@@ -196,6 +196,17 @@ services:
     volumes:
       - redis_data:/data
 
+  engine:
+    build: ./worker
+    container_name: worker
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONUNBUFFERED=1 # Để xem log ngay lập tức
+    restart: always
+
 volumes:
   clickhouse_data:
   clickhouse_logs:

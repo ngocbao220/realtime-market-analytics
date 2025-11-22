@@ -9,6 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from services.user_service import init_admin_account
 from routes import trades, stats, orderbook, symbols, user
+from routes.matching_engine import orders
+from routes.matching_engine import trades as matching_trades
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,7 +55,11 @@ app.include_router(stats.router, prefix="/api", tags=["Statistics"])
 app.include_router(trades.router, prefix="/api", tags=["Trades"])
 app.include_router(orderbook.router, prefix="/api", tags=["Orderbook"])
 app.include_router(symbols.router, prefix="/api", tags=["Symbols"])
+
 app.include_router(user.router, prefix="/user", tags=["User"])
+
+app.include_router(orders.router, prefix="/orders", tags=["OrderBook"])
+app.include_router(matching_trades.router, prefix="/trades", tags=["Trades Matching"])
 
 if __name__ == "__main__":
     import uvicorn

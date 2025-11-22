@@ -3,6 +3,8 @@ import requests
 import time
 import logging
 
+from src.user_api import api_get_balance, api_login
+
 # CẤU HÌNH LOGGING
 logging.basicConfig(
     level=logging.INFO,
@@ -21,69 +23,6 @@ if 'user_info' not in st.session_state:
 if 'is_admin' not in st.session_state:
     st.session_state['is_admin'] = False
 
-# --- GỌI API ĐỂ ĐĂNG NHẬP ---
-def api_login(username):
-    username = username.strip()
-    logging.info(f"🔐 Login request received for username: {username}")
-
-    # 1. ADMIN ĐĂNG NHẬP
-    if username.lower() == "admin":
-        url = f"{API_BASE_URL}/user/get/0"
-        logging.info(f"📡 Fetching admin info from {url}")
-
-        try:
-            response = requests.get(url, timeout=5)
-            logging.info(f"Admin API response code: {response.status_code}")
-
-            if response.status_code == 200:
-                return response.json()
-            else:
-                logging.error("❌ Admin not found on backend.")
-                st.error("Không tìm thấy tài khoản Admin.")
-                return None
-
-        except Exception as e:
-            logging.exception("⚠️ Admin login failed due to exception:")
-            st.error(f"Lỗi kết nối khi lấy Admin: {e}")
-            return None
-
-    # 2. USER THƯỜNG
-    url = f"{API_BASE_URL}/user/create"
-    payload = {"username": username}
-    logging.info(f"📡 Creating new user via POST {url} with payload: {payload}")
-
-    try:
-        response = requests.post(url, json=payload, timeout=5)
-        logging.info(f"User create API response: {response.status_code}")
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logging.error(f"❌ API error: {response.text}")
-            st.error(f"Lỗi API ({response.status_code}): {response.text}")
-            return None
-
-    except requests.exceptions.ConnectionError:
-        logging.error("❌ Could not connect to API.")
-        st.error("Không thể kết nối tới API")
-        return None
-
-
-# --- API LẤY BALANCE ---
-def api_get_balance(user_id):
-    url = f"{API_BASE_URL}/user/get/{user_id}"
-    logging.info(f"📡 Fetching balance for user {user_id}")
-
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        logging.error(f"❌ Error while fetching balance: {e}")
-
-    return None
-
-
 # --- UI ĐĂNG NHẬP ---
 def show_login():
     st.set_page_config(page_title="Crypto Login", layout="centered")
@@ -94,10 +33,10 @@ def show_login():
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info("Nhập tên và bạn sẽ nhận được 1000USDC và 1.0BTC để trải nghiệm!")
+        st.info("Nhập tên của bạn!")
 
         with st.form("login_form"):
-            username = st.text_input("Tên Trader:", placeholder="VD: traderPro hoặc admin")
+            username = st.text_input("Tên Trader:", placeholder="VD: traderPro")
             submitted = st.form_submit_button("🚀 Truy cập hệ thống", use_container_width=True)
 
             if submitted:

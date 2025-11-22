@@ -3,25 +3,14 @@ import requests
 import pandas as pd
 import time
 from config import API_BASE_URL
-from components.user import api_get_all_users, api_delete_user
-
-# --- HÀM API DELETE (Thêm vào nếu chưa có) ---
-def api_delete_user(user_id):
-    """Gọi API xóa user"""
-    try:
-        response = requests.delete(f"{API_BASE_URL}/user/delete/{user_id}", timeout=5)
-        if response.status_code == 200:
-            return True, response.json().get("message")
-        else:
-            return False, response.json().get("detail", "Lỗi không xác định")
-    except Exception as e:
-        return False, str(e)
+from src.user_api import api_get_all_users, api_delete_user
+from src.order_api import api_place_order
 
 # --- COMPONENT: GIAO DIỆN ADMIN ---
 def show_admin_panel():
     st.header("🛠️ Admin Control Panel")
     
-    admin_tab1, admin_tab2 = st.tabs(["👥 Quản lý User", "💰 Thống kê"])
+    admin_tab1, admin_tab2 = st.tabs(["👥 Quản lý User", "Giao dịch hệ thống"])
     
     with admin_tab1:
         col_header_1, col_header_2 = st.columns([4, 1])
@@ -123,7 +112,17 @@ def show_admin_panel():
             
         else:
             st.info("Danh sách trống.")
+    with admin_tab2:
+        col_buy, col_sell = st.columns(2)
+        with col_buy:
+            st.subheader("🟢 Bid (Mua)")
+            buy_orders = requests.get(f"{API_BASE_URL}/orders/book/buy").json()
+            st.dataframe(buy_orders) # Hoặc vẽ bảng tùy chỉnh
 
+        with col_sell:
+            st.subheader("🔴 Ask (Bán)")
+            sell_orders = requests.get(f"{API_BASE_URL}/orders/book/sell").json()
+            st.dataframe(sell_orders)
 # --- MAIN DASHBOARD VIEW ---
 def show_dashboard():
     user = st.session_state['user_info']
@@ -151,22 +150,148 @@ def show_dashboard():
     tabs = st.tabs(tab_names)
 
     with tabs[0]:
-        col_trade_1, col_trade_2 = st.columns(2)
-        with col_trade_1:
-            st.subheader("Đặt lệnh Mua/Bán")
-            # Form đặt lệnh (Sẽ kết nối API trade sau)
-            trade_type = st.radio("Loại lệnh", ["MUA (Buy)", "BÁN (Sell)"], horizontal=True)
-            amount = st.number_input("Số lượng (USD hoặc BTC)", min_value=0.0)
-            if st.button("Gửi lệnh", use_container_width=True):
-                st.toast(f"Đang gửi lệnh {trade_type} - Chức năng đang phát triển...")
+        col_trade_1, col_trade_2 = st.columns([1, 1.5]) # Chia cột: Đặt lệnh nhỏ hơn thị trường chút
         
+        # --- CỘT TRÁI: FORM ĐẶT LỆNH ---
+        with col_trade_1:
+            st.subheader("📝 Đặt lệnh")
+            
+            # 1. Chọn Mua hoặc Bán
+            trade_side = st.radio(
+                "Bạn muốn làm gì?", 
+                ["MUA (Buy)", "BÁN (Sell)"], 
+                horizontal=True
+            )
+            
+            # Xác định màu sắc và biến side
+            if "MUA" in trade_side:
+                side_api = "buy"
+                btn_color = "primary" # Xanh/Đậm
+                balance_text = f"Số dư khả dụng: {user.get('usd', 0):,.2f} USD"
+            else:
+                side_api = "sell"
+                btn_color = "secondary" # Xám/Nhạt (hoặc đỏ nếu config theme)
+                balance_text = f"Số dư khả dụng: {user.get('btc', 0):.6f} BTC"
+
+            st.caption(balance_text)
+
+            # 2. Form nhập liệu
+            with st.form("order_form"):
+                # Giá (USD)
+                price_input = st.number_input(
+                    "Giá đặt (USD)", 
+                    min_value=0.0, 
+                    value=50000.0, 
+                    step=100.0,
+                    format="%.2f"
+                )
+                
+                # Số lượng (BTC)
+                amount_input = st.number_input(
+                    "Số lượng (BTC)", 
+                    min_value=0.0, 
+                    value=0.1, 
+                    step=0.01,
+                    format="%.6f"
+                )
+                
+                # Tính tổng tiền dự kiến
+                total_est = price_input * amount_input
+                st.markdown(f"**Tổng tiền:** `{total_est:,.2f} USD`")
+                
+                # Nút gửi lệnh
+                submitted = st.form_submit_button(
+                    f"🚀 {trade_side.split(' ')[0]} BTC", 
+                    type=btn_color,
+                    use_container_width=True
+                )
+                
+                if submitted:
+                    if amount_input <= 0 or price_input <= 0:
+                        st.warning("Giá và số lượng phải lớn hơn 0.")
+                    else:
+                        # Gọi API thật
+                        with st.spinner("Đang gửi lệnh lên sàn..."):
+                            success, result = api_place_order(
+                                user_id=user.get('user_id'),
+                                side=side_api,
+                                price=price_input,
+                                amount=amount_input
+                            )
+                        
+                        if success:
+                            st.success(f"✅ Đặt lệnh thành công! Order ID: {result.get('order_id')}")
+                            time.sleep(1)
+                            st.rerun() # Refresh để cập nhật số dư (nếu backend có trừ tiền)
+                        else:
+                            st.error(f"❌ Thất bại: {result}")
+
+        # --- CỘT PHẢI: THỊ TRƯỜNG (ORDER BOOK) ---
         with col_trade_2:
-            st.subheader("Thị trường")
-            st.info("Biểu đồ nến sẽ hiển thị ở đây")
+            st.subheader("📊 Sổ lệnh (Order Book)")
+            
+            # Tạo 2 tab con cho Sổ Mua và Sổ Bán
+            ob_tab1, ob_tab2 = st.tabs(["Người bán (Sell)", "Người mua (Buy)"])
+            
+            # Hàm hiển thị bảng phụ trợ
+            def show_book(side_endpoint, color_highlight):
+                try:
+                    res = requests.get(f"{API_BASE_URL}/orders/book/{side_endpoint}")
+                    orders = res.json()
+                    if orders:
+                        df_ob = pd.DataFrame(orders)
+                        # Lọc cột cần thiết
+                        df_show = df_ob[["price", "amount", "user_id"]]
+                        df_show.columns = ["Giá (USD)", "SL (BTC)", "User ID"]
+                        
+                        # Style bảng (Highlight giá)
+                        st.dataframe(
+                            df_show.style.format({"Giá (USD)": "{:,.2f}", "SL (BTC)": "{:.6f}"}),
+                            use_container_width=True,
+                            height=300
+                        )
+                    else:
+                        st.info("Chưa có lệnh nào đang chờ.")
+                except:
+                    st.warning("Không kết nối được OrderBook API")
 
+            with ob_tab1:
+                st.caption("Danh sách người đang bán giá rẻ nhất:")
+                show_book("sell", "red") # API: /orders/book/sell
+
+            with ob_tab2:
+                st.caption("Danh sách người đang mua giá cao nhất:")
+                show_book("buy", "green") # API: /orders/book/buy
     with tabs[1]:
-        st.write("Chưa có lịch sử giao dịch.")
+        st.subheader("🕰️ Khớp lệnh gần đây")
+        
+        # Nút làm mới
+        if st.button("Refresh History"):
+            st.rerun()
 
+        try:
+            # Gọi API lấy lịch sử
+            res = requests.get(f"{API_BASE_URL}/trades/history")
+            trades = res.json()
+            
+            if trades:
+                df_history = pd.DataFrame(trades)
+                
+                # Format thời gian
+                df_history["Time"] = pd.to_datetime(df_history["timestamp"], unit='s')
+                
+                # Chọn cột hiển thị
+                df_show = df_history[["Time", "price", "amount", "buyer_id", "seller_id"]]
+                df_show.columns = ["Thời gian", "Giá Khớp", "SL BTC", "Người Mua", "Người Bán"]
+                
+                st.dataframe(
+                    df_show.style.format({"Giá Khớp": "{:,.2f}", "SL BTC": "{:.6f}"}),
+                    use_container_width=True
+                )
+            else:
+                st.info("Chưa có giao dịch nào được khớp.")
+        except Exception as e:
+            st.error(f"Lỗi tải lịch sử: {e}")
     if is_admin:
         with tabs[2]:
             show_admin_panel()
