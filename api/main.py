@@ -2,10 +2,23 @@
 FastAPI Backend for Dashboard
 """
 
+import logging
+
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from services.user_service import init_admin_account
 from routes import trades, stats, orderbook, symbols, user
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True
+)
+
+print("Đang tạo Admin thủ công...")
+init_admin_account()
+print("Xong! Đã tạo Admin thủ công!!")
 
 app = FastAPI(title="BinanceAPI", version="1.0.0")
 

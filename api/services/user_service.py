@@ -1,4 +1,3 @@
-import uuid
 from db import redis_client
 
 def create_user(username: str):
@@ -21,6 +20,7 @@ def create_user(username: str):
     return {
         "user_id": user_id,
         "username": username,
+        "role": "user",
         "usd": 1000.0,
         "btc": 1.0,
         "reserved_usd": 0.0,
@@ -44,6 +44,7 @@ def get_user(user_id: str):
     return {
         "user_id": info.get("user_id"),
         "username": info.get("username"),
+        "role": info.get("role", "user"),
         "usd": safe_float(balance.get("usd")),
         "btc": safe_float(balance.get("btc")),
         "reserved_usd": safe_float(balance.get("reserved_usd")),
@@ -87,6 +88,7 @@ def get_all_users():
             users.append({
                 "user_id": info.get("user_id"),
                 "username": info.get("username"),
+                "role": info.get("role", "user"),
                 "usd": safe_float(balance.get("usd")),
                 "btc": safe_float(balance.get("btc")),
                 "reserved_usd": safe_float(balance.get("reserved_usd")),
@@ -94,3 +96,59 @@ def get_all_users():
             })
             
     return users
+
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True
+)
+
+def init_admin_account():
+
+    """Hàm này sẽ được chạy khi server khởi động"""
+    admin_id = "0"
+    username = "admin"
+    
+    # Kiểm tra xem admin đã tồn tại chưa
+    if redis_client.exists(f"user:{admin_id}"):
+        logging.info("✅ Admin account already exists.")
+        return
+
+    logging.info("⚙️ Creating default Admin account...")
+
+    redis_client.hset(f"user:{admin_id}", mapping={
+        "user_id": admin_id,
+        "username": username,
+        "role": "admin" # Đánh dấu đây là admin
+    })
+
+    redis_client.hset(f"user:{admin_id}:balance", mapping={
+        "usd": 1000000000.0,
+        "btc": 1000.0,
+        "reserved_usd": 0.0,
+        "reserved_btc": 0.0
+    })
+
+
+def delete_user_service(user_id: str):
+    """Xóa user khỏi hệ thống (Trừ Admin)"""
+    
+    # 1. CHẶN KHÔNG CHO XÓA ADMIN
+    if str(user_id) == "0":
+        return {"success": False, "message": "Không thể xóa tài khoản Admin!"}
+
+    user_key = f"user:{user_id}"
+    balance_key = f"user:{user_id}:balance"
+
+    # Kiểm tra xem user có tồn tại không
+    if not redis_client.exists(user_key):
+        return {"success": False, "message": "User ID không tồn tại."}
+
+    # 2. Xóa dữ liệu (Dùng pipeline để xóa sạch cả 2 key cùng lúc)
+    pipe = redis_client.pipeline()
+    pipe.delete(user_key)
+    pipe.delete(balance_key)
+    pipe.execute()
+
+    return {"success": True, "message": f"Đã xóa User ID {user_id}"}

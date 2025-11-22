@@ -162,6 +162,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - PYTHONUNBUFFERED=1
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=9000
       - CLICKHOUSE_USER=default
@@ -181,7 +182,8 @@ services:
     ports:
       - "8501:8501"
     environment:
-      API_URL: http://api:8000
+      - PYTHONUNBUFFERED=1  
+      - API_PORT=8000
     volumes:
       - ./dashboard:/app
   
@@ -193,8 +195,6 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-
-
 
 volumes:
   clickhouse_data:
