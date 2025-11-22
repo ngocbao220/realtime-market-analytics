@@ -62,7 +62,7 @@ def get_all_users():
     # 2. Dùng Pipeline để gom lệnh (Tối ưu tốc độ, tránh nghẽn mạng)
     pipe = redis_client.pipeline()
     
-    for i in range(1, max_id + 1):
+    for i in range(0, max_id + 1):
         pipe.hgetall(f"user:{i}")          # Lấy thông tin cơ bản
         pipe.hgetall(f"user:{i}:balance")  # Lấy thông tin số dư
         
