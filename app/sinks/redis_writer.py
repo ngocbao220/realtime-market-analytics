@@ -12,8 +12,8 @@ def write_redis_batch_logic(batch_df):
         count = 0
         for row in iterator:
             data = row.asDict()
-            symbol = data.get("symbol") # Giả sử cột tên là symbol
-            price = data.get("price")
+            symbol = data.get("Symbol") # Giả sử cột tên là symbol
+            price = data.get("Price")
             
             if symbol:
                 # 1. Update Giá khớp lệnh (cho Engine)
