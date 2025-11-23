@@ -15,8 +15,8 @@ if __name__ == "__main__":
     spark.sparkContext.setLogLevel("WARN")
     
     start_trades_pipeline(spark)
-    # start_tickers_pipeline(spark)
-    # start_orderbook_pipeline(spark)
-    # start_klines_pipeline(spark)
+    start_tickers_pipeline(spark)
+    start_orderbook_pipeline(spark)
+    start_klines_pipeline(spark)
 
     spark.streams.awaitAnyTermination()
