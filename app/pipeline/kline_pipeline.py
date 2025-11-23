@@ -1,38 +1,38 @@
 from consumer.kafka_reader import read_kafka_stream
-from transform.tickers_transform import transform_tickers
+from transform.kline_transform import transform_kline
 from sinks.clickhouse_writer import write_clickhouse_batch
 from sinks.parquet_writer import write_parquet_stream
 from sinks.console_writer import write_console_stream
-from table.create_tickers_table import create_clickhouse_table_ticker
+from table.create_kline_table import create_clickhouse_table_kline
 from config.setting import *
 
-def start_tickers_pipeline(spark):
+def start_kline_pipeline(spark):
     # 1. Read and clean df
-    df_raw = read_kafka_stream(spark, KAFKA_BROKER, TOPIC_TICKERS)
-    df_clean = transform_tickers(df_raw)
+    df_raw = read_kafka_stream(spark, KAFKA_BROKER, TOPIC_KLINE)
+    df_clean = transform_kline(df_raw)
     
     # 2. Write console log to observation
-    #write_console_stream(df_clean, "tickers", ["symbol","close_price","volume","event_time","open_time","close_time"])
+    #write_console_stream(df_clean, "kline", ["Symbol","Price","Quantity","Side","TradeValue","TradeTime"])
 
     # 3. Write parquet to store further
     #write_parquet_stream(
-    #   df_clean,
-    #   path=f"{OUTPUT_PATH}/tickers",
-    #   checkpoint=f"{CHECKPOINT_DIR}/tickers",
-    #   partition_cols=["symbol","Year","Month","Day"]
+    #    df_clean,
+    #    path=f"{OUTPUT_PATH}/kline",
+    #    checkpoint=f"{CHECKPOINT_DIR}/kline",
+    #    partition_cols=["Symbol","Year","Month","Day"]
     #)
 
     # 4. Write clickhouse to process real-time
     # Create table if not exists
     try:
-        create_clickhouse_table_ticker(
+        create_clickhouse_table_kline(
             host=CLICKHOUSE_HOST,
             port=CLICKHOUSE_PORT,
             user=CLICKHOUSE_USER,
             password=CLICKHOUSE_PASSWORD,
             database=CLICKHOUSE_DATABASE
         )
-        print("Table tickers created/exists.")
+        print("Table kline created/exists.")
     except Exception as e:
         print(f"Error creating table: {e}")
 
@@ -42,7 +42,7 @@ def start_tickers_pipeline(spark):
             write_clickhouse_batch(
                 batch_df,
                 batch_id,
-                table_name="tickers",
+                table_name="klines",
                 user=CLICKHOUSE_USER,
                 password=CLICKHOUSE_PASSWORD,
                 database=CLICKHOUSE_DATABASE,

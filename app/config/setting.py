@@ -3,6 +3,7 @@ KAFKA_BROKER = "kafka:9092"
 TOPIC_TRADES = "binance_trades"
 TOPIC_TICKERS = "binance_tickers_1h"
 TOPIC_ORDERBOOK = "binance_orderbook"
+TOPIC_KLINE = "binance_kline_1m"
 
 # Đường dẫn lưu Parquet
 OUTPUT_PATH = "/data/processed"
