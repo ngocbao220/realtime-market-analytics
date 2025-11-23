@@ -5,6 +5,8 @@ from sinks.redis_writer import write_trades_to_redis
 from table.create_trades_table import create_clickhouse_table_trade
 from config.setting import *
 
+import os
+
 def start_trades_pipeline(spark):
     # 1. Read from Kafka
     df_raw = read_kafka_stream(spark, KAFKA_BROKER, TOPIC_TRADES)
@@ -59,13 +61,14 @@ def start_trades_pipeline(spark):
         finally:
             # Giải phóng bộ nhớ
             batch_df.unpersist()
-
-    # --- KHỞI CHẠY 1 STREAM DUY NHẤT ---
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, "trades")
+    
     query = (
         df_clean.writeStream
+        .queryName("Query_Trades")
         .trigger(processingTime=PROCESSING_TIME)
-        .foreachBatch(process_master_batch) # <--- Trái tim của hệ thống
-        .option("checkpointLocation", CHECKPOINT_DIR)
+        .foreachBatch(process_master_batch)
+        .option("checkpointLocation", checkpoint_path) # <--- Dùng đường dẫn riêng
         .start()
     )
 
