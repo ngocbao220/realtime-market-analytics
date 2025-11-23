@@ -39,7 +39,7 @@ def start_orderbook_pipeline(spark):
             # Bạn cần sửa file redis_writer.py để expose hàm process_partition ra, hoặc viết inline ở đây
             # Ví dụ gọi hàm wrapper:
             write_orderbook_to_redis(batch_df) 
-            print("✅ Redis Update Done")
+            print("✅ Redis Update Orderbook Done")
 
             # -------------------------------------------------
             # NHIỆM VỤ 2: GHI SANG CLICKHOUSE (Cold Data)
@@ -54,7 +54,7 @@ def start_orderbook_pipeline(spark):
                 host=CLICKHOUSE_HOST,
                 port=CLICKHOUSE_PORT
             )
-            print("✅ ClickHouse Insert Done")
+            print("✅ ClickHouse Insert Orderbook Done")
             
         except Exception as e:
             print(f"❌ Error in batch {batch_id}: {e}")
@@ -62,7 +62,7 @@ def start_orderbook_pipeline(spark):
             # Giải phóng bộ nhớ
             batch_df.unpersist()
 
-    checkpoint_path = os.path.join(CHECKPOINT_DIR, "trades")
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, "orderbook")
     
     query = (
         df_clean.writeStream

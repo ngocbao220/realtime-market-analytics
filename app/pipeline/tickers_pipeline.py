@@ -39,7 +39,7 @@ def start_tickers_pipeline(spark):
             # Bạn cần sửa file redis_writer.py để expose hàm process_partition ra, hoặc viết inline ở đây
             # Ví dụ gọi hàm wrapper:
             write_ticker_to_redis(batch_df) 
-            print("✅ Redis Update Done")
+            print("✅ Redis Update Ticker Done")
 
             # -------------------------------------------------
             # NHIỆM VỤ 2: GHI SANG CLICKHOUSE (Cold Data)
@@ -54,7 +54,7 @@ def start_tickers_pipeline(spark):
                 host=CLICKHOUSE_HOST,
                 port=CLICKHOUSE_PORT
             )
-            print("✅ ClickHouse Insert Done")
+            print("✅ ClickHouse Insert Ticker Done")
             
         except Exception as e:
             print(f"❌ Error in batch {batch_id}: {e}")
