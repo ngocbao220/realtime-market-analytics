@@ -32,30 +32,30 @@ def transform_tickers(tickers_raw_df):
         .filter(col("data").isNotNull())
         .select(
             # 2. Rename và Cast đúng kiểu dữ liệu cho ClickHouse
-            col("data.s").alias("symbol"),
-            col("data.e").alias("event_type"),
+            col("data.s").alias("Symbol"),
+            col("data.e").alias("Event_type"),
             
             # Thời gian: Chia 1000 để đổi từ ms sang seconds cho timestamp
-            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("event_time"),
-            from_utc_timestamp((col("data.O") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("open_time"),  
-            from_utc_timestamp((col("data.C") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("close_time"), 
+            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("Event_time"),
+            from_utc_timestamp((col("data.O") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("Open_time"),  
+            from_utc_timestamp((col("data.C") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("Close_time"), 
             
             # Giá và Volume: Cast sang Double (Float64 trong ClickHouse)
-            col("data.o").cast(DoubleType()).alias("open_price"),         # Chú ý: 'o' thường là Price
-            col("data.h").cast(DoubleType()).alias("high_price"),
-            col("data.l").cast(DoubleType()).alias("low_price"),
-            col("data.c").cast(DoubleType()).alias("close_price"),
-            col("data.v").cast(DoubleType()).alias("volume"),
-            col("data.q").cast(DoubleType()).alias("quote_volume")
+            col("data.o").cast(DoubleType()).alias("Open_price"),         # Chú ý: 'o' thường là Price
+            col("data.h").cast(DoubleType()).alias("High_price"),
+            col("data.l").cast(DoubleType()).alias("Low_price"),
+            col("data.c").cast(DoubleType()).alias("Close_price"),
+            col("data.v").cast(DoubleType()).alias("Volume"),
+            col("data.q").cast(DoubleType()).alias("Quote_volume")
         )
-        .filter(col("symbol").isNotNull())
-        .filter(col("open_price") > 0)
-        .filter(col("close_price") > 0)
-        .filter(col("volume") >= 0)
-        .filter(col("high_price") >= col("low_price"))
-        .withColumn("Year", year(col("event_time")))
-        .withColumn("Month", month(col("event_time")))
-        .withColumn("Day", dayofmonth(col("event_time")))
+        .filter(col("Symbol").isNotNull())
+        .filter(col("Open_price") > 0)
+        .filter(col("Close_price") > 0)
+        .filter(col("Volume") >= 0)
+        .filter(col("High_price") >= col("Low_price"))
+        .withColumn("Year", year(col("Event_time")))
+        .withColumn("Month", month(col("Event_time")))
+        .withColumn("Day", dayofmonth(col("Event_time")))
 
     )
 

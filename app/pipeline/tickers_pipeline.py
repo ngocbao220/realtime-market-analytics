@@ -19,6 +19,7 @@ def start_tickers_pipeline(spark):
             user=CLICKHOUSE_USER, password=CLICKHOUSE_PASSWORD,
             database=CLICKHOUSE_DATABASE
         )
+        print(f"Create successfuly table ticker")
     except Exception as e:
         print(f"⚠️ Warning creating table: {e}")
 

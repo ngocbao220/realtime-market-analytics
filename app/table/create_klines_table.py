@@ -5,30 +5,28 @@ def create_clickhouse_table_kline(host, port, user, password, database):
 
     client.execute(f"""
         CREATE TABLE IF NOT EXISTS klines (
-            symbol String,
-            event_time DateTime64(3),
-            open_time DateTime64(3),
+            Symbol String,
+            Event_time DateTime64(3),
+            Open_time DateTime64(3),
+            Close_time DateTime64(3),
+            Interval String,
             
-            -- [FIX] BỔ SUNG 2 CỘT NÀY
-            close_time DateTime64(3),
-            interval String,
+            Open Float64,
+            High Float64,
+            Low Float64,
+            Close Float64,
+            Volume Float64,
+            Quote_volume Float64,
             
-            open Float64,
-            high Float64,
-            low Float64,
-            close Float64,
-            volume Float64,
-            quote_volume Float64,
+            Num_trades UInt64,
+            Taker_buy_volume Float64,
+            Taker_buy_quote_vol Float64,
             
-            num_trades UInt64,
-            taker_buy_volume Float64,
-            taker_buy_quote_vol Float64,
-            
-            is_closed UInt8,
+            Is_closed UInt8,
             Year Int32,
             Month UInt32,
             Day UInt32
         )
         ENGINE = MergeTree()
-        ORDER BY (symbol, open_time);
+        ORDER BY (Symbol, Open_time);
     """)

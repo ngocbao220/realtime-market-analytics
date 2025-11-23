@@ -12,19 +12,19 @@ def create_clickhouse_table_orderbook(
     # Orderbook cần dùng Array(Float64) để lưu danh sách giá/lượng
     client.execute(f"""
         CREATE TABLE IF NOT EXISTS orderbook (
-            symbol String,
-            event_time DateTime64(3),
+            Symbol String,
+            Event_time DateTime64(3),
             
-            bid_prices Array(Float64),
-            bid_quantities Array(Float64),
+            Bid_prices Array(Float64),
+            Bid_quantities Array(Float64),
             
-            ask_prices Array(Float64),
-            ask_quantities Array(Float64),
+            Ask_prices Array(Float64),
+            Ask_quantities Array(Float64),
             
             Year Int32,
             Month UInt32,
             Day UInt32
         )
         ENGINE = MergeTree()
-        ORDER BY (event_time, symbol);
+        ORDER BY (Event_time, Symbol);
     """)

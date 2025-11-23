@@ -9,31 +9,31 @@ def transform_klines(kline_raw_df):
         .select(from_json(col("value").cast("string"), kline_schema).alias("data"))
         .filter(col("data").isNotNull())
         .select(
-            col("data.s").alias("symbol"),
-            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("event_time"),
-            from_utc_timestamp((col("data.k.t") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("open_time"),
+            col("data.s").alias("Symbol"),
+            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("Event_time"),
+            from_utc_timestamp((col("data.k.t") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("Open_time"),
             
             # Giữ 2 cột này (Nhớ sửa file create table để hứng nó)
-            from_utc_timestamp((col("data.k.T") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("close_time"),
-            col("data.k.i").alias("interval"),
+            from_utc_timestamp((col("data.k.T") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("Close_time"),
+            col("data.k.i").alias("Interval"),
             
-            col("data.k.o").cast(DoubleType()).alias("open"),
-            col("data.k.h").cast(DoubleType()).alias("high"),
-            col("data.k.l").cast(DoubleType()).alias("low"),
-            col("data.k.c").cast(DoubleType()).alias("close"),
-            col("data.k.v").cast(DoubleType()).alias("volume"),
-            col("data.k.q").cast(DoubleType()).alias("quote_volume"),
+            col("data.k.o").cast(DoubleType()).alias("Open"),
+            col("data.k.h").cast(DoubleType()).alias("High"),
+            col("data.k.l").cast(DoubleType()).alias("Low"),
+            col("data.k.c").cast(DoubleType()).alias("Close"),
+            col("data.k.v").cast(DoubleType()).alias("Volume"),
+            col("data.k.q").cast(DoubleType()).alias("Quote_volume"),
             
-            col("data.k.n").cast(LongType()).alias("num_trades"),
-            col("data.k.V").cast(DoubleType()).alias("taker_buy_volume"),
-            col("data.k.Q").cast(DoubleType()).alias("taker_buy_quote_vol"),
+            col("data.k.n").cast(LongType()).alias("Num_trades"),
+            col("data.k.V").cast(DoubleType()).alias("Taker_buy_volume"),
+            col("data.k.Q").cast(DoubleType()).alias("Taker_buy_quote_vol"),
             
-            col("data.k.x").cast("integer").alias("is_closed")
+            col("data.k.x").cast("integer").alias("Is_closed")
             
         )
-        .filter(col("symbol").isNotNull())
-        .withColumn("Year", coalesce(year(col("event_time")), lit(2025)))
-        .withColumn("Month", coalesce(month(col("event_time")), lit(1)))
-        .withColumn("Day", coalesce(dayofmonth(col("event_time")), lit(1)))
+        .filter(col("Symbol").isNotNull())
+        .withColumn("Year", coalesce(year(col("Event_time")), lit(2025)))
+        .withColumn("Month", coalesce(month(col("Event_time")), lit(1)))
+        .withColumn("Day", coalesce(dayofmonth(col("Event_time")), lit(1)))
     )
     return kline_cleaned_df

@@ -19,6 +19,8 @@ def start_klines_pipeline(spark):
             user=CLICKHOUSE_USER, password=CLICKHOUSE_PASSWORD,
             database=CLICKHOUSE_DATABASE
         )
+
+        print(f"Create successfuly table kline")
     except Exception as e:
         print(f"⚠️ Warning creating table: {e}")
 
