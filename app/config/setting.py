@@ -5,10 +5,6 @@ TOPIC_TICKERS = "binance_tickers_1h"
 TOPIC_ORDERBOOK = "binance_orderbook"
 TOPIC_KLINE = "binance_kline_1m"
 
-# Đường dẫn lưu Parquet
-OUTPUT_PATH = "/data/processed"
-CHECKPOINT_DIR = "/checkpoints"
-
 
 # Clickhouse config
 CLICKHOUSE_HOST = "clickhouse"
@@ -17,6 +13,11 @@ CLICKHOUSE_USER = "default"
 CLICKHOUSE_PASSWORD = "12345"
 CLICKHOUSE_USER = "default"
 CLICKHOUSE_DATABASE = "default"
+
+# Redis congig
+REDIS_HOST = "redis" 
+REDIS_PORT = 6379
+CHECKPOINT_DIR = "/checkpoints"
 
 # Processing time for real-time
 PROCESSING_TIME="2 seconds"

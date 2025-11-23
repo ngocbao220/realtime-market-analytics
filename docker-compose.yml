@@ -140,7 +140,6 @@ services:
       - ./producer:/app
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - PYTHONUNBUFFERED=1
     command: >
       bash -c "
         echo 'Checking packages...' &&
@@ -162,7 +161,6 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - PYTHONUNBUFFERED=1
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=9000
       - CLICKHOUSE_USER=default
@@ -182,7 +180,6 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - PYTHONUNBUFFERED=1  
       - API_PORT=8000
     volumes:
       - ./dashboard:/app
@@ -196,7 +193,17 @@ services:
     volumes:
       - redis_data:/data
 
-  engine:
+  redis-ui:
+    image: rediscommander/redis-commander
+    container_name: redis-ui
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+
+  worker:
     build: ./worker
     container_name: worker
     depends_on:
@@ -204,7 +211,6 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - PYTHONUNBUFFERED=1 # Để xem log ngay lập tức
     restart: always
 
 volumes:

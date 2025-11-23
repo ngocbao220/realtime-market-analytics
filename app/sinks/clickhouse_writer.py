@@ -12,42 +12,58 @@ def write_clickhouse_batch(
     database: str
 ) -> None:
     """
-    Ghi từng micro-batch của streaming DataFrame vào ClickHouse (TCP, driver).
+    Ghi micro-batch vào ClickHouse theo cách phân tán (Worker nodes).
     """
+    
+    # Check nhanh xem batch có rỗng không (Metadata check)
+    if batch_df.isEmpty():
+        return
 
-    try:
-        count = batch_df.count()
-        if count == 0:
-            print(f"[Batch {batch_id}] Empty batch, skipping...")
-            return
-
-        print(f"[Batch {batch_id}] Processing {count} rows")
-        batch_df.show(3, truncate=False)
-
-        # Chuyển Spark DataFrame sang Pandas để insert
-        pdf = batch_df.toPandas()
-        if pdf.empty:
-            return
-
-        # Khởi tạo client với database
+    # --- HÀM XỬ LÝ TRÊN TỪNG WORKER ---
+    def process_partition(iterator):
+        # 1. Tạo kết nối ClickHouse TẠI WORKER
+        # Lưu ý: Client này mở kết nối TCP cực nhanh
         client = Client(
-            host=host,
-            port=port,      # TCP port, mặc định 9000
-            user=user,
-            password=password,
-            database=database
+            host=host, port=port, 
+            user=user, password=password, 
+            database=database,
+            settings={'use_numpy': True} # Tối ưu nếu có cài numpy
         )
+        
+        # 2. Chuẩn bị dữ liệu
+        # Convert Iterator[Row] thành List[Dict] hoặc List[Tuple]
+        # ClickHouse Driver insert nhanh nhất với List of Tuples hoặc List of Dicts
+        rows = []
+        for row in iterator:
+            # Convert Row object sang Dict
+            r_dict = row.asDict()
+            rows.append(r_dict)
+            
+        if rows:
+            try:
+                # 3. Thực hiện Bulk Insert
+                # Lấy tên cột từ dòng đầu tiên để map đúng field
+                keys = rows[0].keys()
+                columns_str = ", ".join(keys)
+                
+                # INSERT INTO table (col1, col2) VALUES ...
+                # client.execute tự động xử lý list of dicts
+                client.execute(
+                    f'INSERT INTO {table_name} ({columns_str}) VALUES', 
+                    rows
+                )
+            except Exception as e:
+                # Log lỗi cụ thể tại worker (sẽ hiện trong executor logs)
+                print(f"Error inserting partition to CH: {e}")
+                raise e # Raise để Spark biết batch này fail
+        
+        # Đóng kết nối (Client tự quản lý nhưng disconnect cho chắc)
+        client.disconnect()
 
-        # Chuyển DataFrame thành list of dict
-        records = pdf.to_dict(orient='records')
-
-        # Chuẩn bị danh sách column
-        columns = ", ".join(pdf.columns)
-
-        # Dùng execute để insert
-        client.execute(f'INSERT INTO {table_name} ({columns}) VALUES', records)
-
-        print(f"[Batch {batch_id}] Inserted {len(records)} rows into {database}.{table_name}")
-
+    # --- KÍCH HOẠT GHI PHÂN TÁN ---
+    try:
+        # foreachPartition sẽ đẩy hàm process_partition xuống các Executor chạy song song
+        batch_df.foreachPartition(process_partition)
+        print(f"[Batch {batch_id}] Write to ClickHouse Success.")
     except Exception as e:
-        print(f"[Batch {batch_id}] Error writing to ClickHouse: {e}", flush=True)
+        print(f"[Batch {batch_id}] Failed to write ClickHouse: {e}")

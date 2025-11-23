@@ -3,6 +3,7 @@ FROM apache/spark:3.5.0
 # Chuyển sang root để cài package
 USER root
 
-RUN pip install clickhouse-driver pandas
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
 
 USER 1001

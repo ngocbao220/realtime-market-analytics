@@ -29,7 +29,6 @@ def transform_kline(kline_raw_df):
             
             col("data.k.x").cast("integer").alias("is_closed")
             
-            # ĐÃ XÓA CỘT 'ignore' Ở ĐÂY ĐỂ TRÁNH LỖI
         )
         .filter(col("symbol").isNotNull())
         .withColumn("Year", coalesce(year(col("event_time")), lit(2025)))
