@@ -6,7 +6,8 @@ from pyspark.sql.functions import (
 from pyspark.sql.types import *
 from schema.orderbook_schema import orderbook_schema 
 from pyspark.sql.functions import from_utc_timestamp
-def orderbook_transform(orderbook_raw_df):
+
+def transform_orderbook(orderbook_raw_df):
     """
     Transform Orderbook:
     - Parse JSON dựa trên orderbook_schema

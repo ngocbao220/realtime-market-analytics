@@ -2,7 +2,7 @@ from consumer.kafka_reader import read_kafka_stream
 from transform.kline_transform import transform_klines
 from sinks.clickhouse_writer import write_clickhouse_batch
 from sinks.redis_writer import write_kline_to_redis
-from app.table.create_klines_table import create_clickhouse_table_kline
+from table.create_klines_table import create_clickhouse_table_kline
 from config.setting import *
 
 def start_klines_pipeline(spark):

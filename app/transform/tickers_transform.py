@@ -6,6 +6,7 @@ from pyspark.sql.functions import (
 from pyspark.sql.types import *
 from schema.ticker_schema import ticker_schema 
 from pyspark.sql.functions import from_utc_timestamp
+
 def transform_tickers(tickers_raw_df):
     """
     Transform raw tickers DataFrame từ Kafka sang DataFrame đã clean.

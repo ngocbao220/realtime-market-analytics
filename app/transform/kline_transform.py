@@ -2,7 +2,8 @@ from pyspark.sql.functions import col, from_json, year, month, dayofmonth, coale
 from pyspark.sql.types import DoubleType, LongType, IntegerType
 from schema.kline_schema import kline_schema
 from pyspark.sql.functions import from_utc_timestamp
-def transform_kline(kline_raw_df):
+
+def transform_klines(kline_raw_df):
     kline_cleaned_df = (
         kline_raw_df
         .select(from_json(col("value").cast("string"), kline_schema).alias("data"))
