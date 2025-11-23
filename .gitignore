@@ -1,4 +1,3 @@
-/data/
-/checkpoints/
+/checkpoints/   
 *.pyc
 __pycache__/    

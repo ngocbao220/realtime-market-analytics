@@ -5,6 +5,8 @@ from sinks.redis_writer import write_ticker_to_redis
 from table.create_tickers_table import create_clickhouse_table_ticker
 from config.setting import *
 
+import os
+
 def start_tickers_pipeline(spark):
     # 1. Read from Kafka
     df_raw = read_kafka_stream(spark, KAFKA_BROKER, TOPIC_TICKERS)
@@ -17,6 +19,7 @@ def start_tickers_pipeline(spark):
             user=CLICKHOUSE_USER, password=CLICKHOUSE_PASSWORD,
             database=CLICKHOUSE_DATABASE
         )
+        print(f"Create successfuly table ticker")
     except Exception as e:
         print(f"⚠️ Warning creating table: {e}")
 
@@ -37,7 +40,7 @@ def start_tickers_pipeline(spark):
             # Bạn cần sửa file redis_writer.py để expose hàm process_partition ra, hoặc viết inline ở đây
             # Ví dụ gọi hàm wrapper:
             write_ticker_to_redis(batch_df) 
-            print("✅ Redis Update Done")
+            print("✅ Redis Update Ticker Done")
 
             # -------------------------------------------------
             # NHIỆM VỤ 2: GHI SANG CLICKHOUSE (Cold Data)
@@ -52,7 +55,7 @@ def start_tickers_pipeline(spark):
                 host=CLICKHOUSE_HOST,
                 port=CLICKHOUSE_PORT
             )
-            print("✅ ClickHouse Insert Done")
+            print("✅ ClickHouse Insert Ticker Done")
             
         except Exception as e:
             print(f"❌ Error in batch {batch_id}: {e}")
@@ -60,12 +63,14 @@ def start_tickers_pipeline(spark):
             # Giải phóng bộ nhớ
             batch_df.unpersist()
 
-    # --- KHỞI CHẠY 1 STREAM DUY NHẤT ---
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, "tickers")
+    
     query = (
         df_clean.writeStream
+        .queryName("Query_Tickers")
         .trigger(processingTime=PROCESSING_TIME)
-        .foreachBatch(process_master_batch) # <--- Trái tim của hệ thống
-        .option("checkpointLocation", CHECKPOINT_DIR)
+        .foreachBatch(process_master_batch)
+        .option("checkpointLocation", checkpoint_path) # <--- Dùng đường dẫn riêng
         .start()
     )
 
