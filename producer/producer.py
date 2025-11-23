@@ -5,7 +5,7 @@ from websocket_trade import trade_stream
 from websocket_kline import kline_stream
 
 if __name__ == "__main__":
-    symbols = ["btcusdt", "bnbbtc"]  # Danh sách symbol cần subscribe
+    symbols = ["btcusdt", "ethusdt", "solusdt", "bnbusdt", "dogeusdt"]  # Danh sách symbol cần subscribe
     interval_ticker = "1h"
     interval_kline = "1m"
 
