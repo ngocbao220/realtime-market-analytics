@@ -120,10 +120,6 @@ def run_engine():
             buy_orders = get_sorted_orders("buy")
             sell_orders = get_sorted_orders("sell")
 
-            if not buy_orders or not sell_orders:
-                time.sleep(1) # Không có lệnh thì nghỉ 1s cho đỡ tốn CPU
-                continue
-
             # 2. So sánh cặp đầu tiên (Best Bid vs Best Ask)
             best_buy = buy_orders[0]
             best_sell = sell_orders[0]
@@ -132,9 +128,6 @@ def run_engine():
             if best_buy["price"] >= best_sell["price"]:
                 execute_trade(best_buy, best_sell)
                 # Không sleep, chạy tiếp ngay để khớp nốt số dư nếu có
-            else:
-                # Giá chưa gặp nhau -> Nghỉ xíu
-                time.sleep(1)
 
         except Exception as e:
             logging.error(f"Engine Crash: {e}")

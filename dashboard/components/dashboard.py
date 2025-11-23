@@ -83,7 +83,7 @@ def show_admin_panel():
                         user_id = row["ID"] # Lấy ID từ dòng đang chọn
                         
                         # Cập nhật thanh tiến trình
-                        progress_bar.progress((index + 1) / total)
+                        progress_bar.progress((index) / total)
 
                         # Chặn xóa Admin (Safety check phía Client)
                         if str(user_id) == "0":
