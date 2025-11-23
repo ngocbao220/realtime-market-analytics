@@ -1,8 +1,7 @@
 from consumer.kafka_reader import read_kafka_stream
 from transform.kline_transform import transform_kline
 from sinks.clickhouse_writer import write_clickhouse_batch
-from app.sinks.redis_writer import write_parquet_stream
-from sinks.console_writer import write_console_stream
+from sinks.redis_writer import write_redis_batch_logic
 from table.create_kline_table import create_clickhouse_table_kline
 from config.setting import *
 

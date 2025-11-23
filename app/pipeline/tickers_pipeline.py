@@ -1,9 +1,8 @@
 from consumer.kafka_reader import read_kafka_stream
-from transform.tickers_transform import transform_tickers
+from transform.trades_transform import transform_trades
 from sinks.clickhouse_writer import write_clickhouse_batch
-from app.sinks.redis_writer import write_parquet_stream
-from sinks.console_writer import write_console_stream
-from table.create_tickers_table import create_clickhouse_table_ticker
+from sinks.redis_writer import write_redis_batch_logic
+from table.create_trades_table import create_clickhouse_table_trade
 from config.setting import *
 
 def start_tickers_pipeline(spark):

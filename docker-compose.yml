@@ -197,7 +197,7 @@ services:
     image: rediscommander/redis-commander
     container_name: redis-ui
     ports:
-      - "8081:8081"
+      - "8088:8081"
     environment:
       - REDIS_HOSTS=local:redis:6379
     depends_on:

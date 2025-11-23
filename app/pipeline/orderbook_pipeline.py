@@ -1,9 +1,8 @@
 from consumer.kafka_reader import read_kafka_stream
-from transform.orderbook_transform import orderbook_transform
+from transform.trades_transform import transform_trades
 from sinks.clickhouse_writer import write_clickhouse_batch
-from sinks.console_writer import write_console_stream
-from app.sinks.redis_writer import write_parquet_stream
-from table.create_orderbook_table import create_clickhouse_table_orderbook
+from sinks.redis_writer import write_redis_batch_logic
+from table.create_trades_table import create_clickhouse_table_trade
 from config.setting import *
 
 def start_orderbook_pipeline(spark):
