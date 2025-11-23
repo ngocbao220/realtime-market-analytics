@@ -5,7 +5,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import *
 from schema.orderbook_schema import orderbook_schema 
-
+from pyspark.sql.functions import from_utc_timestamp
 def orderbook_transform(orderbook_raw_df):
     """
     Transform Orderbook:
@@ -20,8 +20,7 @@ def orderbook_transform(orderbook_raw_df):
         .filter(col("data").isNotNull())
         .select(
             col("data.s").alias("symbol"),
-            # Chia 1000 vì timestamp của Binance là ms
-            (col("data.E") / 1000).cast("timestamp").alias("event_time"),
+                from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("event_time"),
             
             # --- Xử lý BIDS (Mua) ---
             # data.b là mảng các mảng. x[0] là giá, x[1] là lượng.
