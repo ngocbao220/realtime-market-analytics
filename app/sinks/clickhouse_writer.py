@@ -27,7 +27,6 @@ def write_clickhouse_batch(
             host=host, port=port, 
             user=user, password=password, 
             database=database,
-            settings={'use_numpy': True} # Tối ưu nếu có cài numpy
         )
         
         # 2. Chuẩn bị dữ liệu

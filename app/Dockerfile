@@ -3,7 +3,6 @@ FROM apache/spark:3.5.0
 # Chuyển sang root để cài package
 USER root
 
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install redis clickhouse-driver pandas numpy
 
-USER 1001
+USER 185

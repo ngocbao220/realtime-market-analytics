@@ -71,7 +71,9 @@ services:
 
   # ==================== SPARK MASTER ====================
   spark-master:
-    image: apache/spark:3.5.0
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     container_name: spark-master
     ports:
       - "8080:8080"
@@ -84,7 +86,9 @@ services:
 
   # ==================== SPARK WORKER ====================
   spark-worker:
-    image: apache/spark:3.5.0
+    build:
+      context: ./app
+      dockerfile: Dockerfile
     container_name: spark-worker
     depends_on:
       - spark-master
