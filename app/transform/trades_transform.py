@@ -27,6 +27,7 @@ def transform_trades(trades_raw_df):
     Hour         : Giờ của TradeTime
     """
     
+    from pyspark.sql.functions import from_utc_timestamp
     trades_cleaned_df = (
         trades_raw_df
         .select(from_json(col("value").cast("string"), trade_schema).alias("data"))
@@ -36,8 +37,8 @@ def transform_trades(trades_raw_df):
             col("data.t").alias("TradeID"),
             col("data.p").cast(DoubleType()).alias("Price"),
             col("data.q").cast(DoubleType()).alias("Quantity"),
-            (col("data.E") / 1000).cast("timestamp").alias("EventTime"),
-            (col("data.T") / 1000).cast("timestamp").alias("TradeTime"),
+            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("EventTime"),
+            from_utc_timestamp((col("data.T") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("TradeTime"),
             col("data.m").alias("IsBuyerMaker")
         )
         .withColumn("Side", when(col("IsBuyerMaker") == True, "SELL").otherwise("BUY"))

@@ -1,7 +1,7 @@
 from pyspark.sql.functions import col, from_json, year, month, dayofmonth, coalesce, lit
 from pyspark.sql.types import DoubleType, LongType, IntegerType
 from schema.kline_schema import kline_schema
-
+from pyspark.sql.functions import from_utc_timestamp
 def transform_kline(kline_raw_df):
     kline_cleaned_df = (
         kline_raw_df
@@ -9,11 +9,11 @@ def transform_kline(kline_raw_df):
         .filter(col("data").isNotNull())
         .select(
             col("data.s").alias("symbol"),
-            (col("data.E") / 1000).cast("timestamp").alias("event_time"),
-            (col("data.k.t") / 1000).cast("timestamp").alias("open_time"),
+            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("event_time"),
+            from_utc_timestamp((col("data.k.t") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("open_time"),
             
             # Giữ 2 cột này (Nhớ sửa file create table để hứng nó)
-            (col("data.k.T") / 1000).cast("timestamp").alias("close_time"),
+            from_utc_timestamp((col("data.k.T") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("close_time"),
             col("data.k.i").alias("interval"),
             
             col("data.k.o").cast(DoubleType()).alias("open"),

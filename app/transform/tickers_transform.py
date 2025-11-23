@@ -5,7 +5,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import *
 from schema.ticker_schema import ticker_schema 
-
+from pyspark.sql.functions import from_utc_timestamp
 def transform_tickers(tickers_raw_df):
     """
     Transform raw tickers DataFrame từ Kafka sang DataFrame đã clean.
@@ -35,9 +35,9 @@ def transform_tickers(tickers_raw_df):
             col("data.e").alias("event_type"),
             
             # Thời gian: Chia 1000 để đổi từ ms sang seconds cho timestamp
-            (col("data.E") / 1000).cast("timestamp").alias("event_time"),
-            (col("data.O") / 1000).cast("timestamp").alias("open_time"),  
-            (col("data.C") / 1000).cast("timestamp").alias("close_time"), 
+            from_utc_timestamp((col("data.E") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("event_time"),
+            from_utc_timestamp((col("data.O") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("open_time"),  
+            from_utc_timestamp((col("data.C") / 1000).cast("timestamp"), "Asia/Ho_Chi_Minh").alias("close_time"), 
             
             # Giá và Volume: Cast sang Double (Float64 trong ClickHouse)
             col("data.o").cast(DoubleType()).alias("open_price"),         # Chú ý: 'o' thường là Price
