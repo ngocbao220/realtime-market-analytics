@@ -1,7 +1,7 @@
 from consumer.kafka_reader import read_kafka_stream
 from transform.trades_transform import transform_trades
 from sinks.clickhouse_writer import write_clickhouse_batch
-from sinks.redis_writer import write_redis_batch_logic
+from sinks.redis_writer import write_trades_to_redis
 from table.create_trades_table import create_clickhouse_table_trade
 from config.setting import *
 
@@ -36,7 +36,7 @@ def start_trades_pipeline(spark):
             # Gọi hàm logic ghi Redis (Hàm này không được chứa .writeStream)
             # Bạn cần sửa file redis_writer.py để expose hàm process_partition ra, hoặc viết inline ở đây
             # Ví dụ gọi hàm wrapper:
-            write_redis_batch_logic(batch_df) 
+            write_trades_to_redis(batch_df) 
             print("✅ Redis Update Done")
 
             # -------------------------------------------------
