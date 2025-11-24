@@ -67,7 +67,7 @@ def main():
         with col_center:
             st.markdown(
                     """
-                    <div style='background:#23272f; padding:18px 24px; border-radius:14px; margin-bottom:12px;'>
+                    <div style='background:#23272f; padding:10px 24px; border-radius:14px; margin-bottom:12px;'>
                         <h3 style='color: white; margin: 0; font-size: 22px;'>Biểu đồ giá (Kline / Volume)</h3>
                     </div>
                     """,
