@@ -50,22 +50,19 @@ def main():
             
             # HTML Header động
             st.markdown(
-                f"""
-                <div style='background:#181a20;padding:18px 32px;border-radius:16px;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:40px;box-shadow:0 2px 12px #0003;flex-wrap:wrap;'>
-                    <div style='display:flex;flex-direction:column;align-items:center;'>
-                        <span style='font-size:32px;font-weight:700;color:#f0b90b;letter-spacing:1px;'>{current_symbol}</span>
-                        <span style='font-size:14px;color:#aaa;'>Giá thị trường</span>
-                    </div>
-                    <span style='font-size:38px;font-weight:700;color:#fff;background:#222;padding:6px 24px;border-radius:12px;'>${price:,.2f}</span>
-                    <span style='color:{color_change};font-size:22px;font-weight:700;'>{sign}{change}%</span>
-                    
-                    <div style='display:flex;gap:24px;font-size:16px;'>
-                        <span style='color:#fff;'>Cao 24h: <span style='color:#fff;font-weight:600;'>${high:,.2f}</span></span>
-                        <span style='color:#fff;'>Thấp 24h: <span style='color:#fff;font-weight:600;'>${low:,.2f}</span></span>
-                        <span style='color:#fff;'>Vol 24h: <span style='color:#fff;font-weight:600;'>{vol:,.2f}</span></span>
-                    </div>
-                </div>
-                """,
+                            f"""<div style='background:#181a20;padding:18px 32px;border-radius:16px;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:40px;box-shadow:0 2px 12px #0003;flex-wrap:wrap;'>
+            <div style='display:flex;flex-direction:column;align-items:center;'>
+            <span style='font-size:32px;font-weight:700;color:#f0b90b;letter-spacing:1px;'>{current_symbol}</span>
+            <span style='font-size:14px;color:#aaa;'>Giá thị trường</span>
+            </div>
+            <span style='font-size:38px;font-weight:700;color:#fff;background:#222;padding:6px 24px;border-radius:12px;'>${price:,.2f}</span>
+            <span style='color:{color_change};font-size:22px;font-weight:700;'>{sign}{change}%</span>
+            <div style='display:flex;gap:24px;font-size:16px;'>
+            <span style='color:#fff;'>Cao 24h: <span style='color:#fff;font-weight:600;'>${high:,.2f}</span></span>
+            <span style='color:#fff;'>Thấp 24h: <span style='color:#fff;font-weight:600;'>${low:,.2f}</span></span>
+            <span style='color:#fff;'>Vol 24h: <span style='color:#fff;font-weight:600;'>{vol:,.2f}</span></span>
+            </div>
+            </div>""",
                 unsafe_allow_html=True
             )
         else:
