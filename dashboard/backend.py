@@ -57,15 +57,26 @@ def read_root():
 # ============================================================
 # 2. API USER (QUẢN LÝ NGƯỜI DÙNG) - Giữ nguyên code của bạn
 # ============================================================
-
 @app.post("/user/create")
 def create_user(user: UserRequest):
     username = user.username.strip()
+    
+    # Lấy tất cả key bắt đầu bằng user:
     all_keys = r.keys("user:*")
+    
     for key in all_keys:
-        data = r.hgetall(key)
-        if data.get("username") == username:
-            return data 
+        # QUAN TRỌNG: Bỏ qua key đếm ID (user_id_counter) để tránh lỗi WRONGTYPE
+        if key == "user_id_counter":
+            continue
+            
+        try:
+            data = r.hgetall(key)
+            if data.get("username") == username:
+                return data 
+        except Exception:
+            continue
+
+    # Nếu không tìm thấy user cũ, tạo mới
     new_id = r.incr("user_id_counter") 
     user_key = f"user:{new_id}"
     new_user_data = {"user_id": str(new_id), "username": username, "usd": 50000.0, "btc": 0.0}
