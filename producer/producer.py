@@ -6,7 +6,7 @@ from websocket_kline import kline_stream
 
 if __name__ == "__main__":
     symbols = ["btcusdt", "ethusdt", "solusdt", "bnbusdt", "dogeusdt"]  # Danh sách symbol cần subscribe
-    interval_ticker = "1h"
+    interval_ticker = "1d"
     interval_kline = "1m"
 
     loop = asyncio.get_event_loop()

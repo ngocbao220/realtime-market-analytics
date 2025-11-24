@@ -4,7 +4,7 @@ import json
 from kafka_producer import send_to_kafka
 from helpers import convert_time
 
-async def ticker_stream(symbol: str, interval: str = "1h"):
+async def ticker_stream(symbol: str, interval: str = "1d"):
     url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker_{interval}"
 
     async with websockets.connect(url) as ws:   
@@ -41,7 +41,6 @@ async def ticker_stream(symbol: str, interval: str = "1h"):
                 print(f"Quote asset volume:    {volume_quote}")
                 print("===============================\n")
 
-                # Send to Kafka nếu muốn
                 send_to_kafka(f'binance_tickers_{interval}', data)
 
             except Exception as e:
