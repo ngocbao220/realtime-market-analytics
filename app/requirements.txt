@@ -1,3 +1,7 @@
 clickhouse-driver
 pandas
 redis
+requests
+plotly
+streamlit
+streamlit-autorefresh
