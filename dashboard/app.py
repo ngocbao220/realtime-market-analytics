@@ -79,7 +79,7 @@ def main():
                 hide_index=True,
                 column_config={
                     "Giá": st.column_config.TextColumn(help="Giá bán", width="medium"),
-                    "Lượng": st.column_config.TextColumn(help="Số lượng", width="small"),
+                    "Lượng": st.column_config.TextColumn(help="Số lượng", width="medium"),
                 }
             )
 
@@ -102,7 +102,7 @@ def main():
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
-                    "Giá": st.column_config.TextColumn(help="Giá mua", width="small"),
+                    "Giá": st.column_config.TextColumn(help="Giá mua", width="medium"),
                     "Lượng": st.column_config.TextColumn(help="Số lượng", width="medium"),
                 }
             )
