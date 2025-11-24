@@ -28,7 +28,7 @@ def show_chart():
         
         # CHUYỂN ĐỔI TIMESTAMP SANG DATETIME ĐỂ PLOTLY HIỂU
         df['timestamp'] = pd.to_datetime(df['timestamp'])
-
+        df = df.drop_duplicates(subset=['timestamp'], keep='last').reset_index(drop=True)
         if chart_type == "Nến (Kline)":
             fig = go.Figure(data=[go.Candlestick(
                 x=df['timestamp'],
