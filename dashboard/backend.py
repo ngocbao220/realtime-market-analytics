@@ -214,3 +214,95 @@ def get_kline_hybrid(symbol: str, interval: str = "1m"):
             final_data.append(realtime_candle)
 
     return {"data": final_data}
+# ============================================================
+# 6. API MARKET TICKER (BẢNG GIÁ CÁC ĐỒNG)
+# ============================================================
+@app.get("/api/market/tickers")
+def get_tickers():
+    """
+    Lấy thông tin giá 24h từ Redis (Key: ticker:SYMBOL)
+    """
+    # Danh sách các coin hỗ trợ
+    symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "DOGEUSDT"]
+    results = []
+    
+    for symbol in symbols:
+        try:
+            redis_key = f"ticker:{symbol}"
+            raw = r.get(redis_key)
+            if raw:
+                d = json.loads(raw)
+                # Redis Ticker có: Open_price (giá mở cửa 24h trước) và Close_price (giá hiện tại)
+                open_price = float(d.get("Open_price", 1))
+                close_price = float(d.get("Close_price", 0))
+                
+                # Tính % thay đổi
+                if open_price == 0: change_percent = 0
+                else: change_percent = ((close_price - open_price) / open_price) * 100
+                
+                results.append({
+                    "symbol": symbol,
+                    "price": close_price,
+                    "change": round(change_percent, 2)
+                })
+        except Exception as e:
+            print(f"Lỗi lấy ticker {symbol}: {e}")
+            continue
+            
+    return results
+
+# ============================================================
+# 7. API RECENT TRADES (LỊCH SỬ GIAO DỊCH)
+# ============================================================
+@app.get("/api/trades/{symbol}")
+def get_recent_trades(symbol: str):
+    """
+    Lấy 20 giao dịch gần nhất từ ClickHouse (Bảng 'trades')
+    """
+    symbol = symbol.upper()
+    trades = []
+    try:
+        # Giả sử bảng tên là 'trades'. Nếu bạn chưa tạo bảng này trong ClickHouse
+        # thì API sẽ trả về rỗng (nhưng không crash app).
+        query = f"""
+            SELECT TradeTime, Price, Quantity, IsBuyerMaker 
+            FROM trades 
+            WHERE Symbol = '{symbol}' 
+            ORDER BY TradeTime DESC 
+            LIMIT 20
+        """
+        rows = ch_client.execute(query)
+        
+        for row in rows:
+            # row[0] là TradeTime (datetime)
+            ts = row[0]
+            if isinstance(ts, datetime):
+                ts = ts.strftime("%H:%M:%S") # Chỉ lấy giờ phút giây
+            
+            trades.append({
+                "time": ts,
+                "price": float(row[1]),
+                "amount": float(row[2]),
+                "is_buyer_maker": row[3] # True = Sell (Taker là người bán), False = Buy
+            })
+    except Exception as e:
+        print(f"⚠️ ClickHouse Trades Error: {e}")
+        # Fallback: Nếu không có bảng trades, thử lấy từ Redis trade:latest (chỉ được 1 dòng)
+        try:
+            raw = r.get(f"trade:latest:{symbol}")
+            if raw:
+                d = json.loads(raw)
+                # Parse thời gian từ Redis string
+                raw_time = d.get("TradeTime", "")
+                time_str = raw_time.split(" ")[1].split(".")[0] if " " in raw_time else raw_time
+                
+                trades.append({
+                    "time": time_str,
+                    "price": float(d.get("Price")),
+                    "amount": float(d.get("Quantity")),
+                    "is_buyer_maker": d.get("IsBuyerMaker")
+                })
+        except:
+            pass
+
+    return trades

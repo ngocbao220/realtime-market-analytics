@@ -130,25 +130,67 @@ def main():
                 st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Bên phải: bảng giá các đồng và lịch sử trades
+        # ==================================================
+        # CỘT PHẢI: MARKET INFO & TRADES (REALTIME DATA)
+        # ==================================================
         with col_right:
-            st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;'>Giá các đồng (Markets)</div>", unsafe_allow_html=True)
-            markets_data = [
-                ["OG/USDT", "$1.23900", "-14.26%"],
-                ["1000CAT/USDT", "$0.00328", "+2.17%"],
-                ["1000CHEEMS/USDT", "$0.00115", "+1.95%"],
-            ]
-            markets_df = pd.DataFrame(markets_data, columns=["Cặp", "Giá", "Biến động"])
-            st.dataframe(markets_df, height=140, use_container_width=True, hide_index=True)
+            # 1. BẢNG GIÁ CÁC ĐỒNG (MARKETS)
+            st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;margin-top:12px;'>Giá các đồng (Markets)</div>", unsafe_allow_html=True)
+            
+            # Gọi API lấy dữ liệu thật
+            tickers = api_get_tickers()
+            
+            if tickers:
+                df_markets = pd.DataFrame(tickers)
+                # Format màu sắc cho % biến động
+                # Chúng ta sẽ dùng style của pandas sau, ở đây chuẩn bị dữ liệu
+                
+                # Hiển thị bảng
+                st.dataframe(
+                    df_markets,
+                    column_config={
+                        "symbol": "Cặp",
+                        "price": st.column_config.NumberColumn("Giá", format="$%.4f"),
+                        "change": st.column_config.NumberColumn("24h %", format="%.2f%%")
+                    },
+                    height=200,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info("Đang tải giá thị trường...")
+
             st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-            st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;'>Lịch sử giao dịch (Trades)</div>", unsafe_allow_html=True)
-            trades_data = [
-                ["87,609.67", "0.00112", "10:14:07"],
-                ["87,609.67", "0.00035", "10:14:06"],
-                ["87,609.50", "0.00450", "10:14:05"],
-            ]
-            trades_df = pd.DataFrame(trades_data, columns=["Giá", "Số lượng (BTC)", "Thời gian"])
-            st.dataframe(trades_df, height=140, use_container_width=True, hide_index=True)
+
+            # 2. LỊCH SỬ GIAO DỊCH (TRADES HISTORY)
+            st.markdown(f"<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;'>Giao dịch khớp lệnh ({current_symbol})</div>", unsafe_allow_html=True)
+            
+            # Gọi API lấy trade thật của cặp đang chọn
+            recent_trades = api_get_recent_trades(current_symbol)
+            
+            if recent_trades:
+                df_trades = pd.DataFrame(recent_trades)
+                
+                # Tạo màu cho giá dựa trên là Mua hay Bán (IsBuyerMaker=True -> Taker bán -> Màu đỏ)
+                def color_price(row):
+                    color = "#F6465D" if row['is_buyer_maker'] else "#0ECB81"
+                    return f'color: {color}'
+
+                # Hiển thị
+                st.dataframe(
+                    df_trades[["price", "amount", "time"]], # Chọn cột
+                    column_config={
+                        "price": st.column_config.NumberColumn("Giá", format="%.2f"),
+                        "amount": st.column_config.NumberColumn("Số lượng", format="%.5f"),
+                        "time": "Thời gian"
+                    },
+                    height=300,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info("Chưa có giao dịch khớp lệnh.")
+
     else:
         st.session_state['user_info'] = None
         show_login()
