@@ -102,13 +102,12 @@ def main():
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
-                    "Giá": st.column_config.TextColumn(help="Giá mua", width="medium"),
-                    "Lượng": st.column_config.TextColumn(help="Số lượng", width="small"),
+                    "Giá": st.column_config.TextColumn(help="Giá mua", width="small"),
+                    "Lượng": st.column_config.TextColumn(help="Số lượng", width="medium"),
                 }
             )
         # Trung tâm: Biểu đồ, đặt lệnh mua/bán
         with col_center:
-            st.markdown("<div style='background:#23272f;padding:18px 24px;border-radius:14px;margin-bottom:12px;'>", unsafe_allow_html=True)
             show_chart()
             st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("<div style='display:flex;gap:24px;'>", unsafe_allow_html=True)
