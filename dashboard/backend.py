@@ -152,12 +152,14 @@ def get_kline_hybrid(symbol: str, interval: str = "1m"):
     # --- A. LẤY LỊCH SỬ TỪ CLICKHOUSE ---
     history_data = []
     try:
+        # CÂU SQL ĐÃ ĐƯỢC TỐI ƯU CHO DATA STREAMING:
         query = f"""
             SELECT Open_time, Open, High, Low, Close, Volume 
             FROM klines 
             WHERE Symbol = '{symbol}' AND Interval = '{interval}'
-            ORDER BY Open_time DESC 
-            LIMIT 99
+            ORDER BY Open_time DESC, Event_time DESC  -- 1. Sắp xếp theo nến mới nhất, và update mới nhất
+            LIMIT 1 BY Open_time                      -- 2. Chỉ lấy đúng 1 dòng update cuối cùng cho mỗi phút
+            LIMIT 500                                 -- 3. Lấy 500 cây nến quá khứ
         """
         rows = ch_client.execute(query)
         for row in rows:
