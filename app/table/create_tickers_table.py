@@ -37,7 +37,7 @@ def create_clickhouse_table_ticker(
     #         close_price,
     #         volume,
             
-    #         -- Tính MA7 (Trung bình 7 điểm gần nhất)
+    #         Tính MA7 (Trung bình 7 điểm gần nhất)
     #         avg(close_price) OVER (
     #             PARTITION BY symbol 
     #             ORDER BY event_time 
