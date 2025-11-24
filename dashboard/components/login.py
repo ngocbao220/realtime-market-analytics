@@ -25,7 +25,6 @@ if 'is_admin' not in st.session_state:
 
 # --- UI ĐĂNG NHẬP ---
 def show_login():
-    st.set_page_config(page_title="Crypto Login", layout="centered")
     st.title("Sàn Giao Dịch Giả Lập")
     st.markdown("---")
 
