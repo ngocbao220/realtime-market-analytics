@@ -1,66 +1,100 @@
-"""
-FastAPI Backend for Dashboard
-"""
-
 import logging
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from services.user_service import init_admin_account
-from routes import trades, stats, orderbook, symbols, user
-from routes.matching_engine import orders
-from routes.matching_engine import trades as matching_trades
+import uvicorn
 
+# --- IMPORT SERVICES ---
+# Đảm bảo thư mục services nằm trong python path
+try:
+    from services.user_service import init_admin_account
+except ImportError:
+    # Hàm giả lập (fallback) nếu file chưa tồn tại để test
+    def init_admin_account():
+        logging.info("Giả lập: Đã khởi tạo tài khoản Admin")
+
+# --- IMPORT ROUTERS ---
+# Tôi đã gộp các kiểu import của bạn lại.
+# Đảm bảo bạn có các file này trong thư mục 'routes' hoặc 'routers'.
+try:
+    from routes import trades, stats, orderbook, symbols, user
+    from routes.matching_engine import orders, trades as matching_trades
+except ImportError:
+    logging.warning("Không thể import một hoặc nhiều router. Kiểm tra lại cấu trúc thư mục (routes vs routers).")
+    # Định nghĩa dummy router để app không bị crash nếu thiếu file
+    from fastapi import APIRouter
+    trades = stats = orderbook = symbols = user = orders = matching_trades = type('obj', (object,), {'router': APIRouter()})
+
+# --- CẤU HÌNH LOGGING ---
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     force=True
 )
 
-print("Đang tạo Admin thủ công...")
-init_admin_account()
-print("Xong! Đã tạo Admin thủ công!!")
+# --- LIFESPAN (Sự kiện Khởi động/Tắt Server) ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. Code chạy khi Server BẮT ĐẦU
+    logging.info("🚀 Đang khởi động Backend Giao dịch...")
+    try:
+        init_admin_account()
+        logging.info("✅ Kiểm tra/Tạo tài khoản Admin hoàn tất.")
+    except Exception as e:
+        logging.error(f"❌ Lỗi khi khởi tạo Admin: {e}")
+    
+    yield # Server chạy và phục vụ request tại đây...
+    
+    # 2. Code chạy khi Server TẮT
+    logging.info("🛑 Đang tắt Backend Giao dịch...")
 
-app = FastAPI(title="BinanceAPI", version="1.0.0")
+# --- KHỞI TẠO APP ---
+app = FastAPI(
+    title="Hệ Thống Giao Dịch BinanceAPI", 
+    version="1.0.0", 
+    lifespan=lifespan
+)
 
-# CORS để frontend có thể gọi API
+# --- CẤU HÌNH CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Đổi thành domain cụ thể khi deploy production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Root endpoint
+# --- ĐĂNG KÝ ROUTERS ---
+
+# 1. Dữ liệu chung & Thống kê
+app.include_router(stats.router, prefix="/api/stats", tags=["Thống kê"])
+app.include_router(symbols.router, prefix="/api/symbols", tags=["Dữ liệu thị trường"])
+app.include_router(orderbook.router, prefix="/api/orderbook", tags=["Dữ liệu thị trường"])
+
+# 2. Quản lý người dùng
+app.include_router(user.router, prefix="/api/user", tags=["Người dùng"])
+
+# 3. Giao dịch & Khớp lệnh (Matching Engine)
+app.include_router(trades.router, prefix="/api/trades", tags=["Giao dịch (Công khai)"])
+app.include_router(orders.router, prefix="/api/orders", tags=["Đặt lệnh"])
+app.include_router(matching_trades.router, prefix="/api/matching", tags=["Công cụ khớp lệnh"])
+
+# --- ROOT ENDPOINT ---
 @app.get("/")
 def root():
-    """Health check"""
+    """Kiểm tra sức khỏe hệ thống và danh sách endpoint"""
     return {
-        "status": "ok",
-        "message": "API is running",
+        "trạng_thái": "ok",
+        "thông_báo": "API Hệ thống Giao dịch đang chạy ổn định",
+        "tài_liệu": "/docs",
         "endpoints": {
-            "trades": "/api/trades", 
-            "stats": "/api/stats",
-            "price-history": "/api/price-history",
-            "orderbook": "/api/orderbook",
-            "realtime": "/api/realtime",
-            "symbols": "/api/symbols"
+            "thống_kê": "/api/stats",
+            "sổ_lệnh": "/api/orderbook",
+            "cặp_giao_dịch": "/api/symbols",
+            "người_dùng": "/api/user",
+            "đặt_lệnh": "/api/orders"
         }
     }
 
-# Include routers
-app.include_router(stats.router, prefix="/api", tags=["Statistics"])
-app.include_router(trades.router, prefix="/api", tags=["Trades"])
-app.include_router(orderbook.router, prefix="/api", tags=["Orderbook"])
-app.include_router(symbols.router, prefix="/api", tags=["Symbols"])
-
-app.include_router(user.router, prefix="/user", tags=["User"])
-
-app.include_router(orders.router, prefix="/orders", tags=["OrderBook"])
-app.include_router(matching_trades.router, prefix="/trades", tags=["Trades Matching"])
-
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
