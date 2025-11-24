@@ -28,25 +28,50 @@ def main():
                 st.session_state['user_info'] = None
                 st.rerun()
 
-        # Thông tin cặp tiền ảo trải dài phía trên
-        st.markdown(
-            """
-            <div style='background:#181a20;padding:18px 32px 18px 32px;border-radius:16px;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:56px;box-shadow:0 2px 12px #0003;'>
-                <div style='display:flex;flex-direction:column;align-items:center;'>
-                    <span style='font-size:32px;font-weight:700;color:#f0b90b;letter-spacing:1px;'>BTC/USDT</span>
-                    <span style='font-size:14px;color:#aaa;'>Giá Bitcoin</span>
-                </div>
-                <span style='font-size:38px;font-weight:700;color:#fff;background:#222;padding:6px 24px;border-radius:12px;'>$87,609.67</span>
-                <span style='color:#00c076;font-size:22px;font-weight:700;'>+1.97%</span>
-                <span style='color:#fff;font-size:18px;'>Cao nhất 24h: <span style='color:#00c076;font-weight:600;'>$88,127.64</span></span>
-                <span style='color:#fff;font-size:18px;'>Thấp nhất 24h: <span style='color:#f6465d;font-weight:600;'>$85,420</span></span>
-                <span style='color:#fff;font-size:18px;'>Volume 24h: <span style='color:#00c076;font-weight:600;'>20,022 BTC</span></span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        # --- HEADER: HIỂN THỊ GIÁ THẬT ---
+        # 1. Xác định Symbol đang xem (mặc định BTCUSDT)
+        current_symbol = st.session_state.get("chart_symbol", "BTCUSDT")
+        
+        # 2. Lấy dữ liệu Ticker
+        all_tickers = api_get_tickers()
+        # Tìm data của symbol hiện tại
+        ticker = next((item for item in all_tickers if item["symbol"] == current_symbol), None)
 
-        # Layout chính chia thành 3 cột, không có phân vùng, chế độ xem, bảng phụ
+        if ticker:
+            price = ticker['price']
+            change = ticker['change']
+            high = ticker['high']
+            low = ticker['low']
+            vol = ticker['volume']
+            
+            # Màu sắc biến động
+            color_change = "#00c076" if change >= 0 else "#f6465d"
+            sign = "+" if change >= 0 else ""
+            
+            # HTML Header động
+            st.markdown(
+                f"""
+                <div style='background:#181a20;padding:18px 32px;border-radius:16px;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:40px;box-shadow:0 2px 12px #0003;flex-wrap:wrap;'>
+                    <div style='display:flex;flex-direction:column;align-items:center;'>
+                        <span style='font-size:32px;font-weight:700;color:#f0b90b;letter-spacing:1px;'>{current_symbol}</span>
+                        <span style='font-size:14px;color:#aaa;'>Giá thị trường</span>
+                    </div>
+                    <span style='font-size:38px;font-weight:700;color:#fff;background:#222;padding:6px 24px;border-radius:12px;'>${price:,.2f}</span>
+                    <span style='color:{color_change};font-size:22px;font-weight:700;'>{sign}{change}%</span>
+                    
+                    <div style='display:flex;gap:24px;font-size:16px;'>
+                        <span style='color:#fff;'>Cao 24h: <span style='color:#fff;font-weight:600;'>${high:,.2f}</span></span>
+                        <span style='color:#fff;'>Thấp 24h: <span style='color:#fff;font-weight:600;'>${low:,.2f}</span></span>
+                        <span style='color:#fff;'>Vol 24h: <span style='color:#fff;font-weight:600;'>{vol:,.2f}</span></span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+             # Fallback nếu chưa tải được dữ liệu
+             st.info(f"Đang tải dữ liệu cho {current_symbol}...")
+
         col_left, col_center, col_right = st.columns([2.2, 5, 2.8], gap="large")
 
   # ==================================================

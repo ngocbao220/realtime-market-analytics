@@ -232,10 +232,16 @@ def get_tickers():
             raw = r.get(redis_key)
             if raw:
                 d = json.loads(raw)
-                # Redis Ticker có: Open_price (giá mở cửa 24h trước) và Close_price (giá hiện tại)
+                # Lấy các trường dữ liệu cơ bản
                 open_price = float(d.get("Open_price", 1))
                 close_price = float(d.get("Close_price", 0))
                 
+                # --- [PHẦN MỚI THÊM VÀO] ---
+                high_price = float(d.get("High_price", 0))
+                low_price = float(d.get("Low_price", 0))
+                volume = float(d.get("Volume", 0))
+                # ---------------------------
+
                 # Tính % thay đổi
                 if open_price == 0: change_percent = 0
                 else: change_percent = ((close_price - open_price) / open_price) * 100
@@ -243,7 +249,12 @@ def get_tickers():
                 results.append({
                     "symbol": symbol,
                     "price": close_price,
-                    "change": round(change_percent, 2)
+                    "change": round(change_percent, 2),
+                    # --- [TRẢ VỀ THÊM DỮ LIỆU] ---
+                    "high": high_price,
+                    "low": low_price,
+                    "volume": volume
+                    # -----------------------------
                 })
         except Exception as e:
             print(f"Lỗi lấy ticker {symbol}: {e}")
