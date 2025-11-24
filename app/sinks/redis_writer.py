@@ -46,7 +46,7 @@ def write_trades_to_redis(batch_df):
 # ==========================================
 # 2. HÀM GHI ORDERBOOK (Sổ lệnh)
 # ==========================================
-def write_orderbook_to_redis(batch_df):
+def write_orderbook_to_redis(batch_df, mode='real_market'):
     """
     Ghi dữ liệu Orderbook (Bids/Asks).
     Giả định DataFrame có cột: Symbol, Bids (array/json), Asks (array/json), UpdateTime
@@ -64,7 +64,7 @@ def write_orderbook_to_redis(batch_df):
             if symbol:
                 # Orderbook thường nặng, chỉ lưu JSON 1 cục
                 json_data = json.dumps(data, default=str)
-                pipe.set(f"orderbook:{symbol}", json_data)
+                pipe.set(f"orderbook:{mode}:{symbol}", json_data)
             
             count += 1
             if count % 50 == 0: pipe.execute() # Batch nhỏ hơn vì data orderbook lớn
