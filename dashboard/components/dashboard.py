@@ -4,7 +4,7 @@ import pandas as pd
 import time
 from config import API_BASE_URL
 from src.user_api import api_get_all_users, api_delete_user
-from dashboard.src.orderbook_api import api_place_order
+from src.orderbook_api import api_place_order
 
 # --- COMPONENT: GIAO DIỆN ADMIN ---
 def show_admin_panel():
