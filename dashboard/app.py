@@ -2,6 +2,7 @@ import streamlit as st
 from chart import show_chart
 from components.login import show_login, api_get_balance
 from components.dashboard import show_dashboard
+from src.orderbook_api import api_get_orderbook
 
 def main():
     st.set_page_config(layout="wide")
