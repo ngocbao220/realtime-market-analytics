@@ -1,4 +1,3 @@
-# File: backend.py
 from fastapi import FastAPI
 import redis
 import json
@@ -6,48 +5,55 @@ import os
 
 app = FastAPI()
 
-# Cấu hình Redis (giữ nguyên như cũ)
+# Cấu hình Redis
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
 
-r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+# Kết nối Redis
+try:
+    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+except Exception as e:
+    print(f"Redis connection error: {e}")
+
+# --- ĐÂY LÀ PHẦN BẠN ĐANG THIẾU (để sửa lỗi 404) ---
+@app.get("/")
+def read_root():
+    return {"message": "Backend API đang chạy ổn định!"}
+# ---------------------------------------------------
 
 @app.get("/api/kline/{symbol}")
 def get_kline(symbol: str, interval: str = "1m"):
     """
-    Lấy dữ liệu từ Redis và map lại key cho đúng định dạng chart
+    Lấy dữ liệu từ Redis, parse JSON và map key viết hoa -> viết thường
     """
-    # Quy tắc đặt tên key trong Redis của bạn (kiểm tra lại xem có đúng prefix kline_ chưa)
-    # Nếu trong Redis bạn chỉ lưu là "BNBUSDT_1m" thì sửa dòng dưới thành: f"{symbol.upper()}_{interval}"
-    redis_key = f"kline_{symbol.upper()}_{interval}" 
+    # Giả định key Redis là: kline_BNBUSDT_1m
+    # Bạn cần kiểm tra lại chính xác tên key trong Redis của bạn
+    redis_key = f"kline_{symbol.upper()}_{interval}"
     
-    # Lấy 200 bản ghi mới nhất
+    # Lấy 200 nến mới nhất
     raw_data = r.lrange(redis_key, 0, 200)
     
     mapped_data = []
     for item in raw_data:
         try:
-            # 1. Parse chuỗi JSON từ Redis
-            # Dữ liệu gốc: {"Symbol": "BNBUSDT", "Open": 854.68, "Open_time": "2025-11-24 14:19:00", ...}
+            # Parse JSON gốc từ Redis (có key viết Hoa: Open, High...)
             d = json.loads(item)
             
-            # 2. Tạo dictionary mới với key viết thường để khớp với chart.py
+            # Map sang format mà Chart.py cần (key viết thường: open, high...)
             new_item = {
-                "timestamp": d["Open_time"],  # Dùng Open_time làm mốc thời gian
-                "open": float(d["Open"]),
-                "high": float(d["High"]),
-                "low": float(d["Low"]),
-                "close": float(d["Close"]),
-                "volume": float(d["Volume"])
+                "timestamp": d.get("Open_time"), # Lấy chuỗi thời gian
+                "open": float(d.get("Open", 0)),
+                "high": float(d.get("High", 0)),
+                "low": float(d.get("Low", 0)),
+                "close": float(d.get("Close", 0)),
+                "volume": float(d.get("Volume", 0))
             }
             mapped_data.append(new_item)
         except Exception as e:
-            # Bỏ qua các bản ghi lỗi format
             continue
             
-    # Redis List thường lưu kiểu Stack (Mới vào trước), nên dữ liệu lấy ra có thể bị ngược.
-    # Nếu biểu đồ hiển thị ngược thời gian, hãy bỏ comment dòng dưới:
-    # mapped_data.reverse()
-    
+    # Nếu dữ liệu trong Redis lưu theo kiểu Stack (Mới trước -> Cũ sau), cần đảo ngược lại cho biểu đồ
+    # mapped_data.reverse() 
+
     return {"data": mapped_data}
