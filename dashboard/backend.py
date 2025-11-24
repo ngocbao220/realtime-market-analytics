@@ -90,71 +90,69 @@ def get_user(user_id: str):
 # 2. API ORDER (ĐẶT LỆNH MUA/BÁN)
 # ============================================================
 
-@app.post("/orders/{side}")
-def place_order(side: str, order: OrderRequest):
-    """
-    Xử lý lệnh Buy/Sell và cập nhật số dư
-    """
-    user_key = f"user:{order.user_id}"
+# --- API LẤY ORDERBOOK (SỔ LỆNH) ---
+@app.get("/api/orderbook/{symbol}")
+def get_orderbook(symbol: str):
+    redis_key = f"orderbook:{symbol.upper()}"
+    raw_data = r.get(redis_key)
     
-    if not r.exists(user_key):
-        raise HTTPException(status_code=404, detail="User không tồn tại")
-    
-    # Lấy thông tin user hiện tại
-    user_data = r.hgetall(user_key)
-    current_usd = float(user_data.get("usd", 0))
-    current_btc = float(user_data.get("btc", 0))
-    
-    total_cost = order.price * order.amount
-
-    if side == "buy":
-        if current_usd >= total_cost:
-            new_usd = current_usd - total_cost
-            new_btc = current_btc + order.amount
-            
-            # Cập nhật Redis
-            r.hset(user_key, mapping={"usd": new_usd, "btc": new_btc})
-            return {"status": "success", "message": f"Đã mua {order.amount} BTC", "new_balance": {"usd": new_usd, "btc": new_btc}}
-        else:
-            return {"status": "failed", "detail": "Số dư USD không đủ"}
-
-    elif side == "sell":
-        if current_btc >= order.amount:
-            new_usd = current_usd + total_cost
-            new_btc = current_btc - order.amount
-            
-            # Cập nhật Redis
-            r.hset(user_key, mapping={"usd": new_usd, "btc": new_btc})
-            return {"status": "success", "message": f"Đã bán {order.amount} BTC", "new_balance": {"usd": new_usd, "btc": new_btc}}
-        else:
-            return {"status": "failed", "detail": "Số dư BTC không đủ"}
-    
-    else:
-        raise HTTPException(status_code=400, detail="Side phải là 'buy' hoặc 'sell'")
-
-# ============================================================
-# 3. API KLINE (DỮ LIỆU BIỂU ĐỒ - GIỮ NGUYÊN CŨ)
-# ============================================================
-
+    if not raw_data:
+        return {"bids": [], "asks": []}
+        
+    try:
+        d = json.loads(raw_data)
+        # Map lại cấu trúc cho frontend
+        # Redis: "Bid_prices": [...], "Bid_quantities": [...]
+        # Frontend cần: [[Price, Amount], [Price, Amount]]
+        
+        bids = []
+        if "Bid_prices" in d and "Bid_quantities" in d:
+            for p, q in zip(d["Bid_prices"], d["Bid_quantities"]):
+                 bids.append([str(p), str(q)]) # Chuyển về string để hiển thị đẹp
+                 
+        asks = []
+        if "Ask_prices" in d and "Ask_quantities" in d:
+             for p, q in zip(d["Ask_prices"], d["Ask_quantities"]):
+                 asks.append([str(p), str(q)])
+                 
+        return {"bids": bids[:10], "asks": asks[:10]} # Lấy top 10
+    except:
+        return {"bids": [], "asks": []}
+# --- API LẤY KLINE (BIỂU ĐỒ) ---
 @app.get("/api/kline/{symbol}")
 def get_kline(symbol: str, interval: str = "1m"):
-    redis_key = f"kline_{symbol.upper()}_{interval}"
-    raw_data = r.lrange(redis_key, 0, 200)
+    # 1. Sửa format key: Dùng dấu : thay vì _
+    redis_key = f"kline:{symbol.upper()}:{interval}"
     
+    # 2. Lấy dữ liệu dạng String
+    raw_data = r.get(redis_key)
+    
+    if not raw_data:
+        # Fallback: Nếu không tìm thấy, thử tìm key cũ xem sao
+        redis_key_alt = f"kline_{symbol.upper()}_{interval}"
+        raw_data = r.get(redis_key_alt)
+        
+    if not raw_data:
+        return {"data": []} # Không có dữ liệu
+
     mapped_data = []
-    for item in raw_data:
-        try:
-            d = json.loads(item)
-            new_item = {
-                "timestamp": d.get("Open_time"), 
-                "open": float(d.get("Open", 0)),
-                "high": float(d.get("High", 0)),
-                "low": float(d.get("Low", 0)),
-                "close": float(d.get("Close", 0)),
-                "volume": float(d.get("Volume", 0))
-            }
-            mapped_data.append(new_item)
-        except:
-            continue
+    try:
+        # Dữ liệu của bạn là 1 JSON object duy nhất, không phải List
+        # Ví dụ: {"Symbol": "BTCUSDT", "Open": 86931.26, ...}
+        d = json.loads(raw_data)
+        
+        # Vì Spark đang ghi đè giá trị mới nhất, ta chỉ có 1 cây nến duy nhất tại thời điểm này.
+        # Để vẽ biểu đồ đẹp, ta cần lưu lịch sử. Nhưng tạm thời hiển thị cái mới nhất đã.
+        new_item = {
+            "timestamp": d.get("Open_time"), 
+            "open": float(d.get("Open", 0)),
+            "high": float(d.get("High", 0)),
+            "low": float(d.get("Low", 0)),
+            "close": float(d.get("Close", 0)),
+            "volume": float(d.get("Volume", 0))
+        }
+        mapped_data.append(new_item)
+    except Exception as e:
+        print(f"Lỗi parse JSON: {e}")
             
     return {"data": mapped_data}
