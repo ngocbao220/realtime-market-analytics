@@ -159,7 +159,7 @@ def get_kline_hybrid(symbol: str, interval: str = "1m"):
             WHERE Symbol = '{symbol}' AND Interval = '{interval}'
             ORDER BY Open_time DESC, Event_time DESC  -- 1. Sắp xếp theo nến mới nhất, và update mới nhất
             LIMIT 1 BY Open_time                      -- 2. Chỉ lấy đúng 1 dòng update cuối cùng cho mỗi phút
-            LIMIT 50                                -- 3. Lấy 500 cây nến quá khứ
+            LIMIT 40                                -- 3. Lấy 500 cây nến quá khứ
         """
         rows = ch_client.execute(query)
         for row in rows:

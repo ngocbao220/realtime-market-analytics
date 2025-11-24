@@ -8,7 +8,7 @@ def show_chart():
     # 1. Auto Refresh mỗi 2 giây
     st_autorefresh(interval=3000, key="chart_refresh")
 
-    
+    st.markdown("### Biểu đồ giá (Kline / Volume)")
     
     # Menu chọn
     c1, c2, c3 = st.columns([2, 2, 2])

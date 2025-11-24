@@ -47,32 +47,66 @@ def main():
         # Layout chính chia thành 3 cột, không có phân vùng, chế độ xem, bảng phụ
         col_left, col_center, col_right = st.columns([2.2, 5, 2.8], gap="large")
 
-        # Orderbook bên trái
+  # ==================================================
+        # CỘT TRÁI: ORDER BOOK (ĐÃ SỬA THÀNH DỮ LIỆU THẬT)
+        # ==================================================
         with col_left:
             st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;'>Sổ lệnh (Order Book)</div>", unsafe_allow_html=True)
-            import pandas as pd
-            orderbook_data = [
-                ["87,610.01", "0.25608", "22.42"],
-                ["87,610.00", "0.00130", "0.11"],
-                ["87,609.99", "0.00203", "0.18"],
-                ["87,609.67 ↑", "-", "-"],
-                ["87,612.84", "0.00006", "5.26"],
-                ["87,612.32", "0.37699", "33.02K"],
-                ["87,611.99", "0.15203", "13.32"],
-            ]
-            orderbook_df = pd.DataFrame(orderbook_data, columns=["Giá (USDT)", "Số lượng (BTC)", "Tổng"])
-            st.dataframe(orderbook_df, height=320, use_container_width=True, hide_index=True)
+            
+            # 1. Lấy Symbol hiện tại (đồng bộ với biểu đồ)
+            # Mặc định là BTCUSDT nếu chưa chọn gì
+            current_symbol = st.session_state.get("chart_symbol", "BTCUSDT")
+            
+            # 2. Gọi API lấy dữ liệu thật
+            ob_data = api_get_orderbook(current_symbol)
+            
+            # 3. Xử lý hiển thị ASKS (Người bán - Màu đỏ)
+            # Sắp xếp giá từ cao xuống thấp, lấy 5 lệnh gần nhất
+            asks = ob_data.get("asks", [])
+            if asks:
+                df_asks = pd.DataFrame(asks, columns=["Giá", "Lượng"])
+                df_asks = df_asks.sort_values(by="Giá", ascending=False).tail(8) # Lấy 8 giá thấp nhất (gần giá khớp)
+            else:
+                df_asks = pd.DataFrame(columns=["Giá", "Lượng"])
 
+            st.markdown(f"<div style='text-align:center; color:#F6465D; font-weight:bold;'>Bán (Asks) - {current_symbol}</div>", unsafe_allow_html=True)
+            st.dataframe(
+                df_asks, 
+                height=200, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "Giá": st.column_config.TextColumn(help="Giá bán", width="medium"),
+                    "Lượng": st.column_config.TextColumn(help="Số lượng", width="small"),
+                }
+            )
+
+            # 4. Hiển thị giá khớp lệnh (Ở giữa) - Có thể lấy từ nến gần nhất
+            # Tạm thời để divider
+            st.markdown("---")
+
+            # 5. Xử lý hiển thị BIDS (Người mua - Màu xanh)
+            bids = ob_data.get("bids", [])
+            if bids:
+                df_bids = pd.DataFrame(bids, columns=["Giá", "Lượng"])
+                df_bids = df_bids.sort_values(by="Giá", ascending=False).head(8) # Lấy 8 giá cao nhất
+            else:
+                df_bids = pd.DataFrame(columns=["Giá", "Lượng"])
+
+            st.markdown(f"<div style='text-align:center; color:#0ECB81; font-weight:bold;'>Mua (Bids) - {current_symbol}</div>", unsafe_allow_html=True)
+            st.dataframe(
+                df_bids, 
+                height=200, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "Giá": st.column_config.TextColumn(help="Giá mua", width="medium"),
+                    "Lượng": st.column_config.TextColumn(help="Số lượng", width="small"),
+                }
+            )
         # Trung tâm: Biểu đồ, đặt lệnh mua/bán
         with col_center:
-            st.markdown(
-                    """
-                    <div style='background:#23272f; padding:10px 24px; border-radius:14px; margin-bottom:12px;'>
-                        <h3 style='color: white; margin: 0; font-size: 22px;'>Biểu đồ giá (Kline / Volume)</h3>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            st.markdown("<div style='background:#23272f;padding:18px 24px;border-radius:14px;margin-bottom:12px;'>", unsafe_allow_html=True)
             show_chart()
             st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("<div style='display:flex;gap:24px;'>", unsafe_allow_html=True)
