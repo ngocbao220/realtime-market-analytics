@@ -6,7 +6,7 @@ from streamlit_autorefresh import st_autorefresh
 
 def show_chart():
     # 1. Auto Refresh mỗi 2 giây
-    st_autorefresh(interval=2000, key="chart_refresh")
+    st_autorefresh(interval=1000, key="chart_refresh")
 
     st.markdown("### Biểu đồ giá (Kline / Volume)")
     
