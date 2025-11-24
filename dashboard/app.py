@@ -53,7 +53,7 @@ def main():
         # CỘT TRÁI: ORDER BOOK (ĐÃ SỬA THÀNH DỮ LIỆU THẬT)
         # ==================================================
         with col_left:
-            st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;'>Sổ lệnh (Order Book)</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;margin-top:12px;'>Sổ lệnh (Order Book)</div>", unsafe_allow_html=True)
             
             # 1. Lấy Symbol hiện tại (đồng bộ với biểu đồ)
             # Mặc định là BTCUSDT nếu chưa chọn gì
@@ -78,7 +78,7 @@ def main():
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
-                    "Giá": st.column_config.TextColumn(help="Giá bán", width="medium"),
+                    "Giá": st.column_config.TextColumn(help="Giá bán", width="small"),
                     "Lượng": st.column_config.TextColumn(help="Số lượng", width="medium"),
                 }
             )
@@ -102,7 +102,7 @@ def main():
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
-                    "Giá": st.column_config.TextColumn(help="Giá mua", width="medium"),
+                    "Giá": st.column_config.TextColumn(help="Giá mua", width="small"),
                     "Lượng": st.column_config.TextColumn(help="Số lượng", width="medium"),
                 }
             )
