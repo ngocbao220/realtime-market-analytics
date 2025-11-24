@@ -65,7 +65,14 @@ def main():
 
         # Trung tâm: Biểu đồ, đặt lệnh mua/bán
         with col_center:
-            st.markdown("<div style='background:#23272f;padding:18px 24px;border-radius:14px;margin-bottom:12px;'>", unsafe_allow_html=True)
+            st.markdown(
+                    """
+                    <div style='background:#23272f; padding:18px 24px; border-radius:14px; margin-bottom:12px;'>
+                        <h3 style='color: white; margin: 0; font-size: 22px;'>Biểu đồ giá (Kline / Volume)</h3>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
             show_chart()
             st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("<div style='display:flex;gap:24px;'>", unsafe_allow_html=True)
