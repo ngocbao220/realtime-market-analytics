@@ -50,48 +50,30 @@ def main():
             
             # HTML Header được thiết kế lại (Binance Style)
             st.markdown(
-                f"""
-                <div style='
-                    background: #181a20;
-                    padding: 20px 40px;
-                    border-radius: 16px;
-                    margin-bottom: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                    flex-wrap: wrap;
-                    gap: 20px;
-                '>
-                    <!-- PHẦN 1: CẶP TIỀN -->
-                    <div style='display:flex; flex-direction:column;'>
-                        <span style='font-size:32px; font-weight:800; color:#f0b90b; letter-spacing:1px; line-height:1.1;'>{current_symbol}</span>
-                        <span style='font-size:14px; color:#848e9c; font-weight:500; margin-top:4px;'>Giá thị trường</span>
-                    </div>
-
-                    <!-- PHẦN 2: GIÁ & % -->
-                    <div style='display:flex; align-items:baseline; gap:12px;'>
-                        <span style='font-size:40px; font-weight:700; color:#fff;'>${price:,.2f}</span>
-                        <span style='color:{color_change}; font-size:20px; font-weight:600;'>{sign}{change}%</span>
-                    </div>
-                    
-                    <!-- PHẦN 3: THÔNG SỐ 24H (Dạng cột) -->
-                    <div style='display:flex; gap:32px; align-items:center;'>
-                        <div style='display:flex; flex-direction:column; align-items:flex-end;'>
-                            <span style='color:#848e9c; font-size:12px; font-weight:500; margin-bottom:2px;'>Cao 24h</span>
-                            <span style='color:#00c076; font-size:16px; font-weight:600;'>${high:,.2f}</span>
-                        </div>
-                        <div style='display:flex; flex-direction:column; align-items:flex-end;'>
-                            <span style='color:#848e9c; font-size:12px; font-weight:500; margin-bottom:2px;'>Thấp 24h</span>
-                            <span style='color:#f6465d; font-size:16px; font-weight:600;'>${low:,.2f}</span>
-                        </div>
-                        <div style='display:flex; flex-direction:column; align-items:flex-end;'>
-                            <span style='color:#848e9c; font-size:12px; font-weight:500; margin-bottom:2px;'>Vol 24h</span>
-                            <span style='color:#fff; font-size:16px; font-weight:600;'>{vol:,.2f}</span>
-                        </div>
-                    </div>
-                </div>
-                """,
+                            f"""<div style='background: #181a20; padding: 20px 40px; border-radius: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 20px;'>
+            <div style='display:flex; flex-direction:column;'>
+            <span style='font-size:32px; font-weight:800; color:#f0b90b; letter-spacing:1px; line-height:1.1;'>{current_symbol}</span>
+            <span style='font-size:14px; color:#848e9c; font-weight:500; margin-top:4px;'>Giá thị trường</span>
+            </div>
+            <div style='display:flex; align-items:baseline; gap:12px;'>
+            <span style='font-size:40px; font-weight:700; color:#fff;'>${price:,.2f}</span>
+            <span style='color:{color_change}; font-size:20px; font-weight:600;'>{sign}{change}%</span>
+            </div>
+            <div style='display:flex; gap:32px; align-items:center;'>
+            <div style='display:flex; flex-direction:column; align-items:flex-end;'>
+            <span style='color:#848e9c; font-size:12px; font-weight:500; margin-bottom:2px;'>Cao 24h</span>
+            <span style='color:#00c076; font-size:16px; font-weight:600;'>${high:,.2f}</span>
+            </div>
+            <div style='display:flex; flex-direction:column; align-items:flex-end;'>
+            <span style='color:#848e9c; font-size:12px; font-weight:500; margin-bottom:2px;'>Thấp 24h</span>
+            <span style='color:#f6465d; font-size:16px; font-weight:600;'>${low:,.2f}</span>
+            </div>
+            <div style='display:flex; flex-direction:column; align-items:flex-end;'>
+            <span style='color:#848e9c; font-size:12px; font-weight:500; margin-bottom:2px;'>Vol 24h</span>
+            <span style='color:#fff; font-size:16px; font-weight:600;'>{vol:,.2f}</span>
+            </div>
+            </div>
+            </div>""",
                 unsafe_allow_html=True
             )
         else:
