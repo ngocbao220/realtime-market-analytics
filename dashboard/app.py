@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from chart import show_chart
 from components.login import show_login, api_get_balance
 from components.dashboard import show_dashboard
