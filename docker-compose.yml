@@ -112,8 +112,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK SUBMIT (Giữ nguyên của bạn) ====================
-  # Tôi giữ nguyên phần này vì nó hoạt động tốt với các file jar của bạn
+  # ==================== SPARK SUBMIT (ĐÃ SỬA) ====================
   spark-submit:
     build:
       context: ./app
@@ -121,9 +120,12 @@ services:
     container_name: spark-submit
     user: root
     depends_on:
-      - kafka
-      - spark-master
-      - clickhouse
+      kafka:
+        condition: service_healthy  # CHỜ KAFKA KHỞI ĐỘNG XONG
+      spark-master:
+        condition: service_started
+      clickhouse:
+        condition: service_started
     volumes:
       - ./app:/app
       - ./jars:/extra-jars
@@ -131,6 +133,7 @@ services:
       - ./checkpoints:/checkpoints
     environment:
       SPARK_MASTER_URL: spark://spark-master:7077
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # THÊM BIẾN MÔI TRƯỜNG NÀY
     command: >
       /opt/spark/bin/spark-submit
         --master spark://spark-master:7077
