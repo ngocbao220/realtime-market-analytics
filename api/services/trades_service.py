@@ -2,7 +2,6 @@
 Service layer cho trade data và price history
 """
 
-from typing import Dict, Any, List
 from db import ch_client, redis_client
 from config import INTERVAL_MAP
 import json

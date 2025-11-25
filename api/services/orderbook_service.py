@@ -103,3 +103,68 @@ def get_orderbook_data(symbol: str, type: str = "real_market", side: str = "both
     result["type"] = type
     result["timestamp"] = int(time.time() * 1000)
     return result
+
+
+def cancel_order(user_id: str, order_id: str, symbol: str, side: str):
+    """
+    Hủy lệnh và hoàn tiền (Un-reserve balance)
+    """
+    # 1. Lấy thông tin lệnh
+    order_key = f"orderbook:virtual:{symbol}:{side}:{order_id}"
+    order_data = redis_client.hgetall(order_key)
+    
+    if not order_data:
+        return {"success": False, "msg": "Lệnh không tồn tại"}
+    
+    # Check quyền sở hữu
+    if order_data.get("user_id") != str(user_id):
+        return {"success": False, "msg": "Không phải lệnh của bạn"}
+
+    # Check trạng thái (Chỉ hủy được Pending hoặc Partial)
+    current_status = order_data.get("status")
+    if current_status == "filled":
+        return {"success": False, "msg": "Lệnh đã khớp xong, không thể hủy"}
+    if current_status == "cancelled":
+        return {"success": False, "msg": "Lệnh đã hủy rồi"}
+
+    # 2. Tính toán phần cần hoàn tiền
+    # (Lưu ý: Nếu đã khớp 1 phần, amount trong Redis phải là số CÒN LẠI chưa khớp)
+    remaining_amount = float(order_data.get("amount", 0))
+    price = float(order_data.get("price", 0))
+    side = order_data.get("side") # bids hoặc asks
+    symbol = order_data.get("symbol")
+
+    if remaining_amount <= 0:
+        return {"success": False, "msg": "Không còn khối lượng để hủy"}
+
+    # 3. THỰC HIỆN HỦY (Atomic Pipeline)
+    pipe = redis_client.pipeline()
+    
+    # A. Xóa khỏi Orderbook (ZSET)
+    zset_key = f"orderbook:virtual:{symbol}:{side}"
+    pipe.zrem(zset_key, order_id)
+    
+    # B. Cập nhật trạng thái lệnh
+    pipe.hset(order_key, "status", "cancelled")
+    pipe.hset(order_key, "amount", 0) # Set về 0 để khỏi khớp nhầm
+    
+    # C. HOÀN TIỀN (QUAN TRỌNG NHẤT)
+    user_balance_key = f"user:{user_id}"
+    
+    if side == "bids": 
+        # Nếu là lệnh MUA -> Hoàn lại USDT
+        refund_value = remaining_amount * price
+        # Trừ ở quỹ đóng băng -> Cộng về quỹ khả dụng
+        pipe.hincrbyfloat(user_balance_key, "reserved_usd", -refund_value)
+        pipe.hincrbyfloat(user_balance_key, "usd", refund_value)
+    else:
+        # Nếu là lệnh BÁN -> Hoàn lại BTC (Coin)
+        refund_value = remaining_amount
+        pipe.hincrbyfloat(user_balance_key, "reserved_btc", -refund_value)
+        pipe.hincrbyfloat(user_balance_key, "btc", refund_value)
+        
+    try:
+        pipe.execute()
+        return {"success": True, "msg": f"Đã hủy lệnh {order_id}, hoàn lại {refund_value}"}
+    except Exception as e:
+        return {"success": False, "msg": f"Lỗi hệ thống: {str(e)}"}
