@@ -3,7 +3,7 @@ import requests
 import time
 import logging
 
-from src.user_api import api_get_balance, api_login
+from services.api_client import api_login
 
 # CẤU HÌNH LOGGING
 logging.basicConfig(
