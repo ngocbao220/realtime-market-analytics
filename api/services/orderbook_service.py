@@ -1,4 +1,4 @@
-from db import r, ch_client
+from db import redis_client, ch_client
 import time
 import json
 from typing import Dict, Any
@@ -8,10 +8,10 @@ def place_order_logic(user_id, side, price, amount):
     Logic đặt lệnh: Kiểm tra số dư và cập nhật Redis
     """
     user_key = f"user:{user_id}"
-    if not r.exists(user_key):
+    if not redis_client.exists(user_key):
         return {"status": "failed", "detail": "User không tồn tại"}
     
-    user_data = r.hgetall(user_key)
+    user_data = redis_client.hgetall(user_key)
     # Chuyển đổi an toàn sang float
     try:
         current_usd = float(user_data.get("usd", 0))
@@ -26,7 +26,7 @@ def place_order_logic(user_id, side, price, amount):
         if current_usd >= total_cost:
             new_usd = current_usd - total_cost
             new_btc = current_btc + amount
-            r.hset(user_key, mapping={"usd": new_usd, "btc": new_btc})
+            redis_client.hset(user_key, mapping={"usd": new_usd, "btc": new_btc})
             return {"status": "success", "order_id": int(time.time()), "message": "Mua thành công"}
         else:
             return {"status": "failed", "detail": "Số dư USD không đủ"}
@@ -34,22 +34,24 @@ def place_order_logic(user_id, side, price, amount):
         if current_btc >= amount:
             new_usd = current_usd + total_cost
             new_btc = current_btc - amount
-            r.hset(user_key, mapping={"usd": new_usd, "btc": new_btc})
+            redis_client.hset(user_key, mapping={"usd": new_usd, "btc": new_btc})
             return {"status": "success", "order_id": int(time.time()), "message": "Bán thành công"}
         else:
             return {"status": "failed", "detail": "Số dư BTC không đủ"}
             
     return {"status": "failed", "detail": "Lỗi tham số"}
 
-def get_orderbook_data(symbol: str) -> Dict[str, Any]:
+def get_orderbook_data(symbol: str, type: str, side: str) -> Dict[str, Any]:
     """
-    Lấy dữ liệu Orderbook: Ưu tiên Redis, Fallback về ClickHouse
+    Lấy dữ liệu Orderbook
+    type: "real" or "virtual"
+    side: "bids" or "asks"
     """
     symbol = symbol.upper()
     
     # 1. Thử lấy từ REDIS (Nhanh nhất)
-    redis_key = f"orderbook:{symbol}"
-    raw_data = r.get(redis_key)
+    redis_key = f"orderbook:{type}:{symbol}:{side}"
+    raw_data = redis_client.get(redis_key)
     
     if raw_data:
         try:
@@ -70,48 +72,48 @@ def get_orderbook_data(symbol: str) -> Dict[str, Any]:
             # Nếu lỗi parse, để code chạy tiếp xuống phần ClickHouse (fallback)
 
     # 2. Fallback: Lấy Snapshot từ CLICKHOUSE (Nếu Redis ko có)
-    try:
-        query = f"""
-        SELECT 
-            event_time,
-            bid_prices,
-            bid_quantities,
-            ask_prices,
-            ask_quantities
-        FROM orderbook
-        WHERE symbol = '{symbol}'
-        ORDER BY event_time DESC
-        LIMIT 1
-        """
-        result = ch_client.execute(query)
+    # try:
+    #     query = f"""
+    #     SELECT 
+    #         event_time,
+    #         bid_prices,
+    #         bid_quantities,
+    #         ask_prices,
+    #         ask_quantities
+    #     FROM orderbook
+    #     WHERE symbol = '{symbol}'
+    #     ORDER BY event_time DESC
+    #     LIMIT 1
+    #     """
+    #     result = ch_client.execute(query)
         
-        if result:
-            row = result[0] # Lấy dòng đầu tiên
+    #     if result:
+    #         row = result[0] # Lấy dòng đầu tiên
             
-            # Format dữ liệu từ ClickHouse (Arrays)
-            # row[1] là bid_prices, row[2] là bid_quantities
-            bids = [
-                [str(p), str(q)] 
-                for p, q in zip(row[1], row[2])
-            ][:10]
+    #         # Format dữ liệu từ ClickHouse (Arrays)
+    #         # row[1] là bid_prices, row[2] là bid_quantities
+    #         bids = [
+    #             [str(p), str(q)] 
+    #             for p, q in zip(row[1], row[2])
+    #         ][:10]
             
-            asks = [
-                [str(p), str(q)] 
-                for p, q in zip(row[3], row[4])
-            ][:10]
+    #         asks = [
+    #             [str(p), str(q)] 
+    #             for p, q in zip(row[3], row[4])
+    #         ][:10]
             
-            timestamp_str = row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
+    #         timestamp_str = row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
 
-            return {
-                "symbol": symbol,
-                "source": "clickhouse",
-                "timestamp": timestamp_str,
-                "bids": bids,
-                "asks": asks
-            }
+    #         return {
+    #             "symbol": symbol,
+    #             "source": "clickhouse",
+    #             "timestamp": timestamp_str,
+    #             "bids": bids,
+    #             "asks": asks
+    #         }
             
-    except Exception as e:
-        print(f"ClickHouse orderbook error: {e}")
+    # except Exception as e:
+    #     print(f"ClickHouse orderbook error: {e}")
 
-    # 3. Nếu cả 2 đều tạch -> Trả về rỗng
-    return {"bids": [], "asks": [], "symbol": symbol, "message": "No data"}
+    # # 3. Nếu cả 2 đều tạch -> Trả về rỗng
+    # return {"bids": [], "asks": [], "symbol": symbol, "message": "No data"}

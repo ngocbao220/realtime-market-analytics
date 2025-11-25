@@ -2,13 +2,12 @@ import redis
 import json
 import time
 import datetime
-from config.setting import REDIS_HOST, REDIS_PORT
-import pytz
+from config.setting import REDIS_HOST, REDIS_PORT, SPEED
 
 # ==========================================
 # 1. HÀM GHI TRADES (Giao dịch khớp lệnh)
 # ==========================================
-def write_trades_to_redis(batch_df, mode="real_market"):
+def write_trades_to_redis(batch_df, type="real"):
     """
     Ghi dữ liệu khớp lệnh mới nhất.
     Keys:
@@ -18,8 +17,8 @@ def write_trades_to_redis(batch_df, mode="real_market"):
     def process_partition(iterator):
         r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
-        count = 0
-        
+
+        last_exec_time = time.time()
         for row in iterator:
             data = row.asDict()
             symbol = data.get("Symbol")
@@ -27,17 +26,17 @@ def write_trades_to_redis(batch_df, mode="real_market"):
             
             if symbol:
                 # Update giá hiển thị nhanh (nhẹ)
-                pipe.set(f"current_price:{mode}:{symbol}", price)
+                pipe.set(f"current_price:{type}:{symbol}", price)
                 
                 # Update chi tiết lệnh khớp
                 json_data = json.dumps(data, default=str)
                 
-                # Lưu 50 trades mới nhất
-                pipe.lpush(f"trades_50:{mode}:{symbol}", json_data)
-                pipe.ltrim(f"trades_50:{mode}:{symbol}", 0, 49)
+                pipe.lpush(f"trades:{type}:{symbol}", json_data)
+                pipe.ltrim(f"trades:{type}:{symbol}", 0, 99)
 
-            count += 1
-            if count % 100 == 0: pipe.execute()
+            if time.time() - last_exec_time >= SPEED:
+                pipe.execute()
+                last_exec_time = time.time()
             
         pipe.execute()
         r.close()
@@ -48,7 +47,7 @@ def write_trades_to_redis(batch_df, mode="real_market"):
 # ==========================================
 # 2. HÀM GHI ORDERBOOK (Sổ lệnh)
 # ==========================================
-def write_orderbook_to_redis(batch_df, mode='real_market'):
+def write_orderbook_to_redis(batch_df, type='real'):
     """
     Lưu Orderbook theo nguyên tắc:
     - Score = Timestamp (Để Redis tự sắp xếp thời gian chuẩn xác 100%).
@@ -59,7 +58,7 @@ def write_orderbook_to_redis(batch_df, mode='real_market'):
         r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         
-        count = 0
+        last_exec_time = time.time()
         for row in iterator:
             data = row.asDict()
             symbol = data.get("Symbol")
@@ -80,12 +79,12 @@ def write_orderbook_to_redis(batch_df, mode='real_market'):
                 sort_score = time.time()
 
             # --- XỬ LÝ ASKS ---
-            ask_key = f"orderbook:{mode}:{symbol}:asks"
+            ask_key = f"orderbook:{type}:{symbol}:asks"
             ask_prices = data.get("Ask_prices", [])
             ask_quantities = data.get("Ask_quantities", [])
 
             for p, q in zip(ask_prices, ask_quantities):
-                if float(q) > 0:
+                if float(q) > 0:    
                     record = {
                         "t": readable_time_str, 
                         "p": float(p),
@@ -97,7 +96,7 @@ def write_orderbook_to_redis(batch_df, mode='real_market'):
             pipe.zremrangebyrank(ask_key, 0, -51)
 
             # --- XỬ LÝ BIDS ---
-            bid_key = f"orderbook:{mode}:{symbol}:bids"
+            bid_key = f"orderbook:{type}:{symbol}:bids"
             bid_prices = data.get("Bid_prices", [])
             bid_quantities = data.get("Bid_quantities", [])
 
@@ -112,8 +111,9 @@ def write_orderbook_to_redis(batch_df, mode='real_market'):
 
             pipe.zremrangebyrank(bid_key, 0, -51)
             
-            count += 1
-            if count % 20 == 0: pipe.execute()
+            if time.time() - last_exec_time >= SPEED:
+                pipe.execute()
+                last_exec_time = time.time()
             
         pipe.execute()
         r.close()
@@ -130,7 +130,7 @@ def write_kline_to_redis(batch_df):
     def process_partition(iterator):
         r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
-        count = 0
+        last_exec_time = time.time()
         
         for row in iterator:
             data = row.asDict()
@@ -144,9 +144,10 @@ def write_kline_to_redis(batch_df):
                 
                 # Ghi đè nến hiện tại
                 pipe.set(redis_key, json_data)
-            
-            count += 1
-            if count % 100 == 0: pipe.execute()
+
+            if time.time() - last_exec_time >= SPEED:
+                pipe.execute()
+                last_exec_time = time.time()
             
         pipe.execute()
         r.close()
@@ -166,7 +167,7 @@ def write_ticker_to_redis(batch_df):
     def process_partition(iterator):
         r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
-        count = 0
+        last_exec_time = time.time()
         
         for row in iterator:
             data = row.asDict()
@@ -176,8 +177,9 @@ def write_ticker_to_redis(batch_df):
                 json_data = json.dumps(data, default=str)
                 pipe.set(f"ticker_1d:{symbol}", json_data)
             
-            count += 1
-            if count % 100 == 0: pipe.execute()
+            if time.time() - last_exec_time >= SPEED:
+                pipe.execute()
+                last_exec_time = time.time()
             
         pipe.execute()
         r.close()

@@ -6,21 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # --- IMPORT SERVICES ---
 # [ĐÃ SỬA] Bỏ dấu chấm phía trước để thành Absolute Import
 from services.user_service import init_admin_account
-
-# --- IMPORT ROUTERS ---
-# [ĐÃ SỬA] Bỏ dấu chấm phía trước
-try:
-    from routes import user, orderbook, kline, market
-except ImportError as e:
-    print(f"❌ Lỗi Import Routes: {e}")
-    raise e
-
-# [OPTIONAL] Import các router cũ chưa refactor
-try:
-    from routes import stats, symbols
-except ImportError:
-    from fastapi import APIRouter
-    stats = symbols = type('obj', (object,), {'router': APIRouter()})
+from routes import users, klines, orderbook, tickers, trades
 
 # --- CẤU HÌNH LOGGING ---
 logging.basicConfig(
@@ -66,18 +52,15 @@ app.add_middleware(
 
 # --- ĐĂNG KÝ ROUTER ---
 # 1. User
-app.include_router(user.router) 
+app.include_router(users.router) 
 
 # 2. Orderbook
 app.include_router(orderbook.router)
 
 # 3. Market Data
-app.include_router(kline.router)
-app.include_router(market.router)
-
-# 4. Các Router cũ
-app.include_router(stats.router, prefix="/api/stats", tags=["Statistics"])
-app.include_router(symbols.router, prefix="/api/symbols", tags=["Symbols"])
+app.include_router(klines.router)
+app.include_router(tickers.router)
+app.include_router(trades.router)
 
 # --- ROOT ENDPOINT ---
 @app.get("/")

@@ -1,4 +1,4 @@
-from db import r
+from db import redis_client
 import logging
 
 # Cấu hình logging
@@ -10,7 +10,7 @@ def init_admin_account():
     Hàm này nên được gọi khi server khởi động.
     """
     admin_key = "user:0"
-    if r.exists(admin_key):
+    if redis_client.exists(admin_key):
         return
 
     logging.info("⚙️ Creating default Admin account...")
@@ -23,7 +23,7 @@ def init_admin_account():
         "reserved_usd": 0.0,
         "reserved_btc": 0.0
     }
-    r.hset(admin_key, mapping=admin_data)
+    redis_client.hset(admin_key, mapping=admin_data)
 
 def create_new_user(username: str):
     username = username.strip()
@@ -31,18 +31,18 @@ def create_new_user(username: str):
     # 1. Kiểm tra username đã tồn tại chưa
     # (Dùng cách quét keys cũ để đảm bảo unique name, 
     # sau này tối ưu có thể dùng Set: usernames_taken)
-    all_keys = r.keys("user:*")
+    all_keys = redis_client.keys("user:*")
     for key in all_keys:
         if key == "user_id_counter": continue
         try:
             # Chỉ lấy field username để check cho nhẹ
-            stored_name = r.hget(key, "username")
+            stored_name = redis_client.hget(key, "username")
             if stored_name == username:
-                return r.hgetall(key)
+                return redis_client.hgetall(key)
         except: continue
 
     # 2. Tạo User mới
-    new_id = r.incr("user_id_counter") 
+    new_id = redis_client.incr("user_id_counter") 
     user_key = f"user:{new_id}"
     
     new_user_data = {
@@ -54,7 +54,7 @@ def create_new_user(username: str):
         "reserved_usd": 0.0,
         "reserved_btc": 0.0
     }
-    r.hset(user_key, mapping=new_user_data)
+    redis_client.hset(user_key, mapping=new_user_data)
     return new_user_data
 
 def get_user_balance(user_id: str):
@@ -62,13 +62,13 @@ def get_user_balance(user_id: str):
     user_key = f"user:{user_id}"
     
     # Nếu là admin nhưng chưa có trong DB thì init luôn
-    if user_id == "0" and not r.exists(user_key):
+    if user_id == "0" and not redis_client.exists(user_key):
         init_admin_account()
 
-    if not r.exists(user_key):
+    if not redis_client.exists(user_key):
         return None 
         
-    data = r.hgetall(user_key)
+    data = redis_client.hgetall(user_key)
     
     # Helper convert float an toàn
     def safe_float(val):
@@ -87,10 +87,10 @@ def get_all_users_logic():
     Lấy danh sách user tối ưu bằng Pipeline
     """
     # 1. Lấy ID lớn nhất hiện tại
-    max_id = r.get("user_id_counter")
+    max_id = redis_client.get("user_id_counter")
     if not max_id:
         # Nếu chưa có user nào, thử check admin
-        if r.exists("user:0"):
+        if redis_client.exists("user:0"):
             max_id = 0
         else:
             return []
@@ -98,7 +98,7 @@ def get_all_users_logic():
     max_id = int(max_id)
     
     # 2. Dùng Pipeline để gom lệnh (Tối ưu tốc độ)
-    pipe = r.pipeline()
+    pipe = redis_client.pipeline()
     # Quét từ 0 (Admin) đến max_id
     for i in range(0, max_id + 1):
         pipe.hgetall(f"user:{i}")
@@ -124,12 +124,12 @@ def delete_user_logic(user_id: str):
         return {"success": False, "message": "Không thể xóa tài khoản Admin"}
     
     user_key = f"user:{user_id}"
-    if not r.exists(user_key):
+    if not redis_client.exists(user_key):
         return {"success": False, "message": "User không tồn tại"}
     
     try:
         # Xóa key user
-        r.delete(user_key)
+        redis_client.delete(user_key)
         # Nếu sau này có key balance riêng thì xóa thêm ở đây
         # r.delete(f"user:{user_id}:balance")
         return {"success": True, "message": f"Đã xóa user {user_id}"}

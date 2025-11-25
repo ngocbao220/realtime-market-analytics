@@ -3,104 +3,38 @@ Service layer cho trade data và price history
 """
 
 from typing import Dict, Any, List
-from services.clickhouse_service import get_clickhouse_client
+from db import ch_client, redis_client
 from config import INTERVAL_MAP
+import json
 
-def get_price_history(symbol: str, interval: str = "1m", limit: int = 100) -> Dict[str, Any]:
+def get_trades(symbol: str, mode="real_time", type="real", user_id=None, limit=None):
     """
-    Lấy lịch sử giá theo khoảng thời gian (OHLCV - cho candlestick)
-    
-    Args:
-        symbol: Trading pair
-        interval: Khoảng thời gian (1m, 5m, 15m, 1h)
-        limit: Số điểm dữ liệu
-    
-    Returns:
-        Dict chứa OHLCV data
+    Dùng để lấy lịch sử giao dịch khớp.
+    mode: "real_time" or "history". 
+    type: "real" or "virtual"
     """
-    client = get_clickhouse_client()
+    symbol = symbol.upper()
+    trades = []
+    if (mode == "history"):
+        """
+        Hàm này dùng để lấy toàn bộ dữ liệu từ clickhouse
+        """
     
-    time_bucket = INTERVAL_MAP.get(interval, INTERVAL_MAP["1m"])
-    
-    # Tính OHLCV (Open, High, Low, Close, Volume) cho candlestick
-    query = f"""
-    SELECT 
-        {time_bucket} as timestamp,
-        argMin(Price, TradeTime) as open,
-        MAX(Price) as high,
-        MIN(Price) as low,
-        argMax(Price, TradeTime) as close,
-        SUM(TradeValue) as volume,
-        COUNT(*) as trades
-    FROM trades
-    WHERE Symbol = '{symbol}'
-      AND TradeTime >= now() - INTERVAL 24 HOUR
-    GROUP BY timestamp
-    ORDER BY timestamp DESC
-    LIMIT {limit}
-    """
-    
-    result = client.execute(query)
-    
-    # Tự động chọn độ chính xác dựa vào giá trị
-    decimals = 8 if symbol.endswith('BTC') or symbol.endswith('ETH') else 2
-    
-    return {
-        "symbol": symbol,
-        "interval": interval,
-        "data": [
-            {
-                "timestamp": row[0].isoformat(),
-                "open": round(row[1], decimals),
-                "high": round(row[2], decimals),
-                "low": round(row[3], decimals),
-                "close": round(row[4], decimals),
-                "volume": round(row[5], decimals),
-                "trades": row[6]
-            }
-            for row in result
-        ]
-    }
+    elif (mode == "real_time"):
+        """
+        Hàm này dùng để lấy những giao dịch mới nhất 
+        """
+        if not limit: limit = 30
 
-def get_realtime_trades(symbol: str, limit: int = 10) -> Dict[str, Any]:
-    """
-    Lấy trades gần nhất (realtime)
-    Dùng để hiển thị live trades
-    
-    Args:
-        symbol: Trading pair
-        limit: Số lượng trades
-    
-    Returns:
-        Dict chứa danh sách trades gần nhất
-    """
-    client = get_clickhouse_client()
-    
-    query = f"""
-    SELECT 
-        TradeTime,
-        Price,
-        Quantity,
-        Side,
-        TradeValue
-    FROM trades
-    WHERE Symbol = '{symbol}'
-    ORDER BY TradeTime DESC
-    LIMIT {limit}
-    """
-    
-    result = client.execute(query)
-    
-    return {
-        "symbol": symbol,
-        "trades": [
-            {
-                "time": row[0].isoformat(),
-                "price": row[1],
-                "quantity": row[2],
-                "side": row[3],
-                "value": row[4]
-            }
-            for row in result
-        ]
-    }
+        try:
+            raw = redis_client.get(f"trades:{type}:{symbol}")
+            # TODO: CHECK cho mỗi user thì sao
+            if user_id: raw = redis_client.get(f"user:{user_id}:trades:{symbol}")
+            # TODO: SỬa đoạn này nữa
+            if raw:
+                d = json.loads(raw)
+                raw_t = d.get("TradeTime", "")
+                ts = raw_t.split(" ")[1].split(".")[0] if " " in raw_t else raw_t
+                trades.append({"time": ts, "price": float(d["Price"]), "amount": float(d["Quantity"]), "is_buyer_maker": d["IsBuyerMaker"]})
+        except: pass
+    return trades

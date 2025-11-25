@@ -1,4 +1,4 @@
-from db import r, ch_client
+from db import redis_client, ch_client
 import json
 from datetime import datetime
 
@@ -31,10 +31,10 @@ def get_kline_hybrid_logic(symbol: str, interval: str, limit: int = 500):
     except Exception as e:
         print(f"⚠️ ClickHouse Error: {e}")
 
-    # 2. Redis (Realtime)
+    # 2. Redis (Realtime): Chỉ ở biểu đồ nến cập nhật
     redis_key = f"kline:{symbol}:{interval}"
-    raw_data = r.get(redis_key)
-    if not raw_data: raw_data = r.get(f"kline_{symbol}_{interval}") 
+    raw_data = redis_client.get(redis_key)
+    if not raw_data: raw_data = redis_client.get(f"kline_{symbol}_{interval}") 
 
     realtime_candle = None
     if raw_data:
