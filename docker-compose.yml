@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # ==================== INFRASTRUCTURE ====================
+  # ==================== INFRASTRUCTURE (CƠ SỞ HẠ TẦNG) ====================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -23,6 +23,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Cấu hình để Kafka hoạt động cả trong và ngoài Docker
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
@@ -94,19 +95,16 @@ services:
     networks:
       - trading-network
 
-  # ==================== APP SERVICES ====================
+  # ==================== APP SERVICES (ỨNG DỤNG CHÍNH) ====================
   
-  # [GIỮ NGUYÊN FOLDER ./api CỦA BẠN]
+  # BACKEND API
   api:
     build:
-      context: ./api  # <-- Giữ nguyên folder của bạn
+      context: ./api
       dockerfile: Dockerfile
     container_name: api
-    # Chạy file main.py nằm ngay trong thư mục api
+    # Quan trọng: Lệnh này chạy file main.py nằm ngay trong thư mục /app (tức là ./api)
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    depends_on:
-      - clickhouse
-      - redis
     ports:
       - "8000:8000"
     environment:
@@ -117,31 +115,72 @@ services:
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=12345
       - CLICKHOUSE_DATABASE=default
+    depends_on:
+      - clickhouse
+      - redis
     volumes:
       - ./api:/app
     networks:
       - trading-network
 
+  # FRONTEND DASHBOARD
   dashboard:
     build:
       context: ./dashboard
       dockerfile: Dockerfile
     container_name: dashboard
-    depends_on:
-      - api
     ports:
       - "8501:8501"
     environment:
-      # Dashboard gọi sang container "api" cổng 8000
+      # Sửa lại tên biến môi trường cho đúng chuẩn URL
+      # Dashboard sẽ gọi API qua tên service "api" trong mạng nội bộ
       - API_URL=http://api:8000
+    depends_on:
+      - api
     volumes:
       - ./dashboard:/app
     command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
     networks:
       - trading-network
 
-  # ==================== SPARK & WORKERS ====================
+  # ==================== DATA PIPELINE (WORKERS & SPARK) ====================
   
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./producer:/app
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    command: >
+      bash -c "
+        echo 'Checking packages...' &&
+        python -c 'import confluent_kafka, websockets, json; print(\"All OK\")' &&
+        echo 'Waiting for Kafka to be fully ready...' &&
+        sleep 10 &&
+        echo 'Starting producers...' &&
+        python /app/producer.py
+      "
+    networks:
+      - trading-network
+
+  worker:
+    build: ./worker
+    container_name: worker
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    restart: always
+    networks:
+      - trading-network
+
   spark-master:
     build:
       context: ./app
@@ -204,42 +243,6 @@ services:
         --conf spark.driver.memory=2g
         --conf spark.executor.memory=2g
         /app/app.py
-    networks:
-      - trading-network
-
-  producer:
-    build:
-      context: ./producer
-      dockerfile: Dockerfile
-    container_name: producer
-    depends_on:
-      kafka:
-        condition: service_healthy
-    volumes:
-      - ./producer:/app
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-    command: >
-      bash -c "
-        echo 'Checking packages...' &&
-        python -c 'import confluent_kafka, websockets, json; print(\"All OK\")' &&
-        echo 'Waiting for Kafka to be fully ready...' &&
-        sleep 10 &&
-        echo 'Starting producers...' &&
-        python /app/producer.py
-      "
-    networks:
-      - trading-network
-
-  worker:
-    build: ./worker
-    container_name: worker
-    depends_on:
-      - redis
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    restart: always
     networks:
       - trading-network
 
