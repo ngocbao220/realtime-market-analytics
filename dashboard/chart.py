@@ -8,7 +8,7 @@ from services.api_client import get_kline
 
 def show_chart():
     # 1. Auto Refresh mỗi 3 giây
-    st_autorefresh(interval=3000, key="chart_refresh")
+    st_autorefresh(interval=2000, key="chart_refresh")
 
     st.markdown(
         """
