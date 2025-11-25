@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # ==================== ZOOKEEPER ====================
+  # ==================== ZOOKEEPER (Giữ nguyên) ====================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -13,7 +13,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== KAFKA ====================
+  # ==================== KAFKA (Giữ nguyên) ====================
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -24,16 +24,13 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 3
-
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "29092"]
       interval: 5s
@@ -43,7 +40,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== KAFKA UI ====================
+  # ==================== KAFKA UI (Giữ nguyên) ====================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -56,7 +53,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== CLICKHOUSE ====================
+  # ==================== CLICKHOUSE (Giữ nguyên) ====================
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
@@ -77,7 +74,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK MASTER ====================
+  # ==================== SPARK MASTER (Giữ nguyên) ====================
   spark-master:
     build:
       context: ./app
@@ -94,7 +91,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK WORKER ====================
+  # ==================== SPARK WORKER (Giữ nguyên) ====================
   spark-worker:
     build:
       context: ./app
@@ -115,7 +112,8 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK SUBMIT ====================
+  # ==================== SPARK SUBMIT (Giữ nguyên của bạn) ====================
+  # Tôi giữ nguyên phần này vì nó hoạt động tốt với các file jar của bạn
   spark-submit:
     build:
       context: ./app
@@ -145,7 +143,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== PRODUCER ====================
+  # ==================== PRODUCER (Giữ nguyên) ====================
   producer:
     build:
       context: ./producer
@@ -157,7 +155,7 @@ services:
     volumes:
       - ./producer:/app
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     command: >
       bash -c "
         echo 'Checking packages...' &&
@@ -170,21 +168,24 @@ services:
     networks:
       - trading-network
 
-  # ==================== API (FASTAPI) ====================
-  # [ĐÃ SỬA]: Cập nhật biến môi trường và depends_on để kết nối Database
+  # ==================== API (ĐÃ SỬA ĐỂ CHẠY BACKEND MỚI) ====================
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     container_name: api
+    # [SỬA 1]: Thêm lệnh command để chạy đúng file main.py
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - clickhouse
       - redis
     ports:
       - "8000:8000"
     environment:
+      # [SỬA 2]: Thêm biến môi trường Redis để backend kết nối được
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=9000
       - CLICKHOUSE_USER=default
@@ -195,8 +196,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== DASHBOARD (STREAMLIT) ====================
-  # [ĐÃ SỬA]: Cập nhật API_URL đúng chuẩn HTTP
+  # ==================== DASHBOARD (ĐÃ SỬA ĐỂ KẾT NỐI API) ====================
   dashboard:
     build:
       context: ./dashboard
@@ -207,7 +207,7 @@ services:
     ports:
       - "8501:8501"
     environment:
-      # [QUAN TRỌNG]: Sửa API_PORT thành API_URL đầy đủ
+      # [SỬA 3]: Đổi API_PORT thành API_URL chuẩn HTTP
       - API_URL=http://api:8000
     volumes:
       - ./dashboard:/app
@@ -215,7 +215,7 @@ services:
     networks:
       - trading-network
   
-  # ==================== REDIS ====================
+  # ==================== REDIS & WORKER (Giữ nguyên) ====================
   redis:
     image: redis:7.2
     container_name: redis
@@ -239,7 +239,6 @@ services:
     networks:
       - trading-network
 
-  # ==================== WORKER ====================
   worker:
     build: ./worker
     container_name: worker
