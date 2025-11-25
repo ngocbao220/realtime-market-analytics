@@ -22,8 +22,8 @@ def read_kafka_stream(spark: SparkSession, kafka_broker: str, topic: str):
         .format("kafka")
         .option("kafka.bootstrap.servers", kafka_broker)
         .option("subscribe", topic)
-        .option("startingOffsets", "earliest")   # "earliest" hoặc "latest"
-        .option("failOnDataLoss", "false")       # không fail nếu mất data
+        .option("startingOffsets", "earliest")  
+        .option("failOnDataLoss", "false")    
         .option("maxOffsetsPerTrigger", 2000)
         .load()
     )
