@@ -16,7 +16,6 @@ def get_trades(symbol: str, mode="real_time", type="real", user_id=None, limit=N
     """
     symbol = symbol.upper()
     trades = []
-    market_type = "real" if type == "real" else type
 
     if mode == "history":
         # --- LẤY TỪ CLICKHOUSE (Cold Data) ---
@@ -59,7 +58,7 @@ def get_trades(symbol: str, mode="real_time", type="real", user_id=None, limit=N
                 redis_key = f"user:{user_id}:trades:{symbol}"
             else:
                 # Key chung thị trường (Dạng List)
-                redis_key = f"trades:{market_type}:{symbol}"
+                redis_key = f"trades:{type}:{symbol}"
 
             # Lấy danh sách (Redis List)
             raw_list = redis_client.lrange(redis_key, 0, limit - 1)
