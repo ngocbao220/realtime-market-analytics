@@ -1,7 +1,7 @@
 from db import redis_client, ch_client
 import time
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Union, List
 
 def place_order_logic(user_id, side, price, amount):
     """
@@ -41,79 +41,65 @@ def place_order_logic(user_id, side, price, amount):
             
     return {"status": "failed", "detail": "Lỗi tham số"}
 
-def get_orderbook_data(symbol: str, type: str, side: str) -> Dict[str, Any]:
+def get_orderbook_data(symbol: str, type: str = "real_market", side: str = "both") -> Union[List, Dict]:
     """
-    Lấy dữ liệu Orderbook
-    type: "real" or "virtual"
-    side: "bids" or "asks"
+    Lấy dữ liệu Orderbook từ Redis ZSET.
+    Args:
+        symbol: BTCUSDT
+        type: "real_market" (hoặc virtual)
+        side: "bids", "asks", hoặc "both"
     """
     symbol = symbol.upper()
     
-    # 1. Thử lấy từ REDIS (Nhanh nhất)
-    redis_key = f"orderbook:{type}:{symbol}:{side}"
-    raw_data = redis_client.get(redis_key)
-    
-    if raw_data:
-        try:
-            d = json.loads(raw_data)
-            # Format dữ liệu từ Redis JSON
-            bids = [[str(p), str(q)] for p, q in zip(d.get("Bid_prices",[]), d.get("Bid_quantities",[]))]
-            asks = [[str(p), str(q)] for p, q in zip(d.get("Ask_prices",[]), d.get("Ask_quantities",[]))]
-            
-            return {
-                "symbol": symbol,
-                "source": "redis",
-                "timestamp": d.get("Event_time", ""),
-                "bids": bids[:10], 
-                "asks": asks[:10]
-            }
-        except Exception as e:
-            print(f"Redis orderbook parse error: {e}")
-            # Nếu lỗi parse, để code chạy tiếp xuống phần ClickHouse (fallback)
-
-    # 2. Fallback: Lấy Snapshot từ CLICKHOUSE (Nếu Redis ko có)
-    # try:
-    #     query = f"""
-    #     SELECT 
-    #         event_time,
-    #         bid_prices,
-    #         bid_quantities,
-    #         ask_prices,
-    #         ask_quantities
-    #     FROM orderbook
-    #     WHERE symbol = '{symbol}'
-    #     ORDER BY event_time DESC
-    #     LIMIT 1
-    #     """
-    #     result = ch_client.execute(query)
+    # Hàm nội bộ để lấy và parse dữ liệu từ Redis ZSET
+    def fetch_and_parse(key_side, reverse_sort=True):
+        # Key format chính xác: orderbook:real_market:BTCUSDT:bids
+        key = f"orderbook:{type}:{symbol}:{key_side}"
         
-    #     if result:
-    #         row = result[0] # Lấy dòng đầu tiên
+        # Lấy 50 phần tử mới nhất (theo score/timestamp)
+        # Redis ZSET lưu: member='{"p":..., "a":...}', score=timestamp
+        items = redis_client.zrange(key, 0, 50, desc=True)
+        
+        orders = []
+        for item in items:
+            try:
+                d = json.loads(item)
+                orders.append({
+                    "price": float(d.get("p", 0)),
+                    "amount": float(d.get("a", 0))
+                })
+            except: continue
             
-    #         # Format dữ liệu từ ClickHouse (Arrays)
-    #         # row[1] là bid_prices, row[2] là bid_quantities
-    #         bids = [
-    #             [str(p), str(q)] 
-    #             for p, q in zip(row[1], row[2])
-    #         ][:10]
-            
-    #         asks = [
-    #             [str(p), str(q)] 
-    #             for p, q in zip(row[3], row[4])
-    #         ][:10]
-            
-    #         timestamp_str = row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0])
+        # Sắp xếp lại theo Giá (Price)
+        # Bids: Giá cao nhất lên đầu (Reverse=True)
+        # Asks: Giá thấp nhất lên đầu (Reverse=False)
+        return sorted(orders, key=lambda x: x["price"], reverse=reverse_sort)[:20]
 
-    #         return {
-    #             "symbol": symbol,
-    #             "source": "clickhouse",
-    #             "timestamp": timestamp_str,
-    #             "bids": bids,
-    #             "asks": asks
-    #         }
-            
-    # except Exception as e:
-    #     print(f"ClickHouse orderbook error: {e}")
+    result = {}
 
-    # # 3. Nếu cả 2 đều tạch -> Trả về rỗng
-    # return {"bids": [], "asks": [], "symbol": symbol, "message": "No data"}
+    # 1. Xử lý Bids (Mua)
+    if side == "bids" or side == "both":
+        bids_data = fetch_and_parse("bids", reverse_sort=True)
+        # Format đơn giản: [[price, amount], ...]
+        formatted_bids = [[o["price"], o["amount"]] for o in bids_data]
+        
+        if side == "bids": 
+            return formatted_bids # Trả về List nếu chỉ hỏi bids
+        
+        result["bids"] = formatted_bids
+
+    # 2. Xử lý Asks (Bán)
+    if side == "asks" or side == "both":
+        asks_data = fetch_and_parse("asks", reverse_sort=False)
+        formatted_asks = [[o["price"], o["amount"]] for o in asks_data]
+        
+        if side == "asks": 
+            return formatted_asks # Trả về List nếu chỉ hỏi asks
+        
+        result["asks"] = formatted_asks
+
+    # Trả về Dict nếu hỏi cả hai
+    result["symbol"] = symbol
+    result["type"] = type
+    result["timestamp"] = int(time.time() * 1000)
+    return result
