@@ -3,6 +3,7 @@ import json
 import time
 import datetime
 from config.setting import REDIS_HOST, REDIS_PORT
+import pytz
 
 # ==========================================
 # 1. HÀM GHI TRADES (Giao dịch khớp lệnh)
@@ -49,10 +50,10 @@ def write_trades_to_redis(batch_df, mode="real_market"):
 # ==========================================
 def write_orderbook_to_redis(batch_df, mode='real_market'):
     """
-    Ghi dữ liệu Orderbook:
-    - Score = Timestamp (Để lấy 50 cái mới nhất).
-    - Value = Price.
-    - Logic khớp lệnh (Engine) sẽ phải lôi data về và tự sort lại theo Giá.
+    Lưu Orderbook theo nguyên tắc:
+    - Score = Timestamp (Để Redis tự sắp xếp thời gian chuẩn xác 100%).
+    - Member = JSON String chứa toàn bộ data.
+    - Luôn giữ 50 bản ghi có Timestamp lớn nhất (Mới nhất).
     """
     def process_partition(iterator):
         r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
@@ -64,67 +65,52 @@ def write_orderbook_to_redis(batch_df, mode='real_market'):
             symbol = data.get("Symbol")
             if not symbol: continue
 
-            # Lấy thời gian từ sự kiện hoặc dùng thời gian hiện tại của server
-            # Format mẫu: "2025-11-25 00:05:05.314000"
-            event_time_str = data.get("Event_time")
-            try:
-                # Chuyển đổi string time sang timestamp (float)
-                # Nếu chuỗi thời gian có định dạng cố định, dùng strptime
-                dt_obj = datetime.strptime(event_time_str, "%Y-%m-%d %H:%M:%S.%f")
-                timestamp = dt_obj.timestamp()
-            except:
-                # Fallback nếu lỗi format
-                timestamp = time.time()
-
-            # --- 1. XỬ LÝ ASKS (BÁN) ---
-            ask_z_key = f"orderbook:{mode}:{symbol}:asks"
-            ask_h_key = f"orderbook:{mode}:{symbol}:asks:vol"
+            # --- SỬA LỖI Ở ĐÂY ---
+            raw_time = data.get("Event_time")
             
+            # 1. Xử lý Time String (để lưu vào JSON cho người đọc)
+            if isinstance(raw_time, (datetime.datetime, datetime.time)):
+                # Nếu là object datetime -> Chuyển thành chuỗi String đẹp
+                readable_time_str = raw_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+                # Lấy timestamp số để làm Score sắp xếp
+                sort_score = raw_time.timestamp()
+            else:
+                # Nếu là string hoặc số sẵn rồi
+                readable_time_str = str(raw_time)
+                sort_score = time.time()
+
+            # --- XỬ LÝ ASKS ---
+            ask_key = f"orderbook:{mode}:{symbol}:asks"
             ask_prices = data.get("Ask_prices", [])
             ask_quantities = data.get("Ask_quantities", [])
 
             for p, q in zip(ask_prices, ask_quantities):
-                price_str = str(p)
-                vol_float = float(q)
+                if float(q) > 0:
+                    record = {
+                        "t": readable_time_str, 
+                        "p": float(p),
+                        "a": float(q)
+                    }
+                    # json.dumps giờ sẽ không lỗi nữa vì "t" là string
+                    pipe.zadd(ask_key, {json.dumps(record): sort_score})
 
-                if vol_float > 0:
-                    # QUAN TRỌNG: Score bây giờ là TIMESTAMP
-                    # Lệnh nào mới cập nhật sẽ có timestamp lớn hơn -> nằm ở cuối ZSET
-                    pipe.zadd(ask_z_key, {price_str: timestamp})
-                    pipe.hset(ask_h_key, price_str, vol_float)
-                else:
-                    # Volume = 0 -> Xóa
-                    pipe.zrem(ask_z_key, price_str)
-                    pipe.hdel(ask_h_key, price_str)
-            
-            # TRIM: GIỮ 50 CÁI MỚI NHẤT
-            # ZSET sắp xếp theo Time tăng dần: [Cũ nhất, ..., Mới nhất]
-            # Muốn giữ 50 cái Mới nhất (Cuối cùng), ta xóa từ 0 đến -51
-            pipe.zremrangebyrank(ask_z_key, 0, -51)
+            pipe.zremrangebyrank(ask_key, 0, -51)
 
-
-            # --- 2. XỬ LÝ BIDS (MUA) ---
-            bid_z_key = f"orderbook:{mode}:{symbol}:bids"
-            bid_h_key = f"orderbook:{mode}:{symbol}:bids:vol"
-            
+            # --- XỬ LÝ BIDS ---
+            bid_key = f"orderbook:{mode}:{symbol}:bids"
             bid_prices = data.get("Bid_prices", [])
             bid_quantities = data.get("Bid_quantities", [])
 
             for p, q in zip(bid_prices, bid_quantities):
-                price_str = str(p)
-                vol_float = float(q)
+                if float(q) > 0:
+                    record = {
+                        "t": readable_time_str,
+                        "p": float(p),
+                        "a": float(q)
+                    }
+                    pipe.zadd(bid_key, {json.dumps(record): sort_score})
 
-                if vol_float > 0:
-                    # Score là TIMESTAMP
-                    pipe.zadd(bid_z_key, {price_str: timestamp})
-                    pipe.hset(bid_h_key, price_str, vol_float)
-                else:
-                    pipe.zrem(bid_z_key, price_str)
-                    pipe.hdel(bid_h_key, price_str)
-
-            # TRIM: GIỮ 50 CÁI MỚI NHẤT
-            # Logic y hệt Asks vì ta đang sort theo Thời gian, không phải Giá
-            pipe.zremrangebyrank(bid_z_key, 0, -51)
+            pipe.zremrangebyrank(bid_key, 0, -51)
             
             count += 1
             if count % 20 == 0: pipe.execute()

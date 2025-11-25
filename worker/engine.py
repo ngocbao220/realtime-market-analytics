@@ -86,7 +86,7 @@ real_script_sha = redis_client.script_load(LUA_MATCH_REAL)
 def run_engine():
     while True:
         # Lấy lệnh Mua tốt nhất của User
-        best_buy_ids = redis_client.zrevrange("orders:virtual:buy", 0, 0)
+        best_buy_ids = redis_client.zrevrange("orderbook:virtual:buy", 0, 0)
         if not best_buy_ids: 
             time.sleep(0.5)
             continue
@@ -94,7 +94,7 @@ def run_engine():
         best_buy = get_order_details(best_buy_ids[0])
         
         # --- LỚP 1: THỬ KHỚP NỘI BỘ (P2P) ---
-        best_sell_ids = redis_client.zrange("orders:virtual:sell", 0, 0)
+        best_sell_ids = redis_client.zrange("orderbook:virtual:sell", 0, 0)
         match_found_p2p = False
         
         if best_sell_ids:
@@ -114,7 +114,7 @@ def run_engine():
         # --- LỚP 2: NẾU KHÔNG KHỚP NỘI BỘ -> KHỚP REAL ---
         if not match_found_p2p:
             # Lấy giá bán tốt nhất từ Binance (Market Data Worker đã nạp vào)
-            real_asks = redis_client.zrange("orders:real:asks", 0, 0, withscores=True)
+            real_asks = redis_client.zrange("orderbook:real_market:asks", 0, 0, withscores=True)
             
             if real_asks:
                 real_price = float(real_asks[0][1]) # Giá (Score)
