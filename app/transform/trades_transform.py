@@ -45,6 +45,7 @@ def transform_trades(trades_raw_df):
         .withColumn("TradeValue", col("Price") * col("Quantity"))
         .filter(col("Price") > 0)
         .filter(col("Quantity") > 0)
+        .withColumn("Type", lit("real")) 
         .withColumn("Year", year(col("TradeTime")))
         .withColumn("Month", month(col("TradeTime")))
         .withColumn("Day", dayofmonth(col("TradeTime")))

@@ -23,4 +23,4 @@ CHECKPOINT_DIR = "/checkpoints"
 PROCESSING_TIME="2 seconds"
 
 # Tốc độ lấy dữ liệu từ Redis
-SPEED = 1
+SPEED = 0.3

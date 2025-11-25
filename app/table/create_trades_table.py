@@ -20,6 +20,7 @@ def create_clickhouse_table_trade(
             IsBuyerMaker UInt8,
             Side String,
             TradeValue Float64,
+            Type String,
             Year Int32,
             Month Int32,
             Day Int32,
