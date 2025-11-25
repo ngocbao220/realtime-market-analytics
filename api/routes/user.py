@@ -1,27 +1,31 @@
 from fastapi import APIRouter, HTTPException
-from services.user_service import create_user, get_user, get_all_users, delete_user_service
+from schemas.models import UserRequest
+from services import user_service
 
-router = APIRouter()
+router = APIRouter(prefix="/user", tags=["User"])
 
 @router.post("/create")
-def create_user_api(data: dict):
-    return create_user(data["username"])
+def create_user(user: UserRequest):
+    # Dùng Pydantic model (UserRequest) thay vì dict -> Chuẩn hơn
+    return user_service.create_new_user(user.username)
 
 @router.get("/get/{user_id}")
-def get_user_api(user_id: str):
-    return get_user(user_id)
+def get_user(user_id: str):
+    data = user_service.get_user_balance(user_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="User not found")
+    return data
 
 @router.get("/get_all")
-def list_users_api():
-    """API lấy danh sách toàn bộ user"""
-    return get_all_users()
+def get_all_users():
+    return user_service.get_all_users_logic()
 
 @router.delete("/delete/{user_id}")
-def delete_user_api(user_id: str):
-    result = delete_user_service(user_id)
+def delete_user(user_id: str):
+    result = user_service.delete_user_logic(user_id)
     
     if not result["success"]:
-        # Nếu lỗi logic (vd xóa admin hoặc ko tìm thấy), trả về 400 Bad Request
+        # Trả về lỗi 400 nếu logic xóa thất bại (vd xóa admin)
         raise HTTPException(status_code=400, detail=result["message"])
         
     return result

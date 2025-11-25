@@ -1,154 +1,137 @@
-from db import redis_client
-
-def create_user(username: str):
-    user_id = redis_client.incr("user:id:counter")
-    
-    # Lưu info cơ bản
-    redis_client.hset(f"user:{user_id}", mapping={
-        "user_id": user_id,
-        "username": username,
-    })
-
-    # Lưu balance riêng
-    redis_client.hset(f"user:{user_id}:balance", mapping={
-        "usd": 1000.0,
-        "btc": 1.0,
-        "reserved_usd": 0.0,
-        "reserved_btc": 0.0
-    })
-
-    return {
-        "user_id": user_id,
-        "username": username,
-        "role": "user",
-        "usd": 1000.0,
-        "btc": 1.0,
-        "reserved_usd": 0.0,
-        "reserved_btc": 0.0
-    }
-
-def get_user(user_id: str):
-    info = redis_client.hgetall(f"user:{user_id}")
-    balance = redis_client.hgetall(f"user:{user_id}:balance")
-
-    if not info or not balance:
-        return {"error": "User not found"}
-
-    # Convert balance sang float
-    def safe_float(v):
-        try:
-            return float(v)
-        except:
-            return 0.0
-
-    return {
-        "user_id": info.get("user_id"),
-        "username": info.get("username"),
-        "role": info.get("role", "user"),
-        "usd": safe_float(balance.get("usd")),
-        "btc": safe_float(balance.get("btc")),
-        "reserved_usd": safe_float(balance.get("reserved_usd")),
-        "reserved_btc": safe_float(balance.get("reserved_btc")),
-    }
-
-def get_all_users():
-    # 1. Lấy ID lớn nhất hiện tại
-    max_id = redis_client.get("user:id:counter")
-    if not max_id:
-        return []
-    
-    max_id = int(max_id)
-    
-    # 2. Dùng Pipeline để gom lệnh (Tối ưu tốc độ, tránh nghẽn mạng)
-    pipe = redis_client.pipeline()
-    
-    for i in range(0, max_id + 1):
-        pipe.hgetall(f"user:{i}")          # Lấy thông tin cơ bản
-        pipe.hgetall(f"user:{i}:balance")  # Lấy thông tin số dư
-        
-    # Thực thi 1 lần duy nhất cho tất cả lệnh trên
-    results = pipe.execute()
-    
-    # 3. Xử lý kết quả trả về
-    users = []
-    
-    # Hàm con để convert số an toàn
-    def safe_float(v):
-        try: return float(v)
-        except: return 0.0
-
-    # Results sẽ trả về xen kẽ: [info_1, bal_1, info_2, bal_2, ...]
-    # Bước nhảy là 2 (step=2)
-    for i in range(0, len(results), 2):
-        info = results[i]
-        balance = results[i+1]
-        
-        # Kiểm tra kỹ xem user có dữ liệu không (để tránh user bị xóa hoặc lỗi)
-        if info and "user_id" in info:
-            users.append({
-                "user_id": info.get("user_id"),
-                "username": info.get("username"),
-                "role": info.get("role", "user"),
-                "usd": safe_float(balance.get("usd")),
-                "btc": safe_float(balance.get("btc")),
-                "reserved_usd": safe_float(balance.get("reserved_usd")),
-                "reserved_btc": safe_float(balance.get("reserved_btc")),
-            })
-            
-    return users
-
+from db import r
 import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    force=True
-)
+
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 def init_admin_account():
-
-    """Hàm này sẽ được chạy khi server khởi động"""
-    admin_id = "0"
-    username = "admin"
-    
-    # Kiểm tra xem admin đã tồn tại chưa
-    if redis_client.exists(f"user:{admin_id}"):
-        logging.info("✅ Admin account already exists.")
+    """
+    Khởi tạo tài khoản Admin (ID 0) nếu chưa có.
+    Hàm này nên được gọi khi server khởi động.
+    """
+    admin_key = "user:0"
+    if r.exists(admin_key):
         return
 
     logging.info("⚙️ Creating default Admin account...")
-
-    redis_client.hset(f"user:{admin_id}", mapping={
-        "user_id": admin_id,
-        "username": username,
-        "role": "admin" # Đánh dấu đây là admin
-    })
-
-    redis_client.hset(f"user:{admin_id}:balance", mapping={
-        "usd": 1000000000.0,
+    admin_data = {
+        "user_id": "0",
+        "username": "admin",
+        "role": "admin",
+        "usd": 1000000000.0, # 1 Tỷ USD
         "btc": 1000.0,
         "reserved_usd": 0.0,
         "reserved_btc": 0.0
-    })
+    }
+    r.hset(admin_key, mapping=admin_data)
 
-
-def delete_user_service(user_id: str):
-    """Xóa user khỏi hệ thống (Trừ Admin)"""
+def create_new_user(username: str):
+    username = username.strip()
     
-    # 1. CHẶN KHÔNG CHO XÓA ADMIN
-    if str(user_id) == "0":
-        return {"success": False, "message": "Không thể xóa tài khoản Admin!"}
+    # 1. Kiểm tra username đã tồn tại chưa
+    # (Dùng cách quét keys cũ để đảm bảo unique name, 
+    # sau này tối ưu có thể dùng Set: usernames_taken)
+    all_keys = r.keys("user:*")
+    for key in all_keys:
+        if key == "user_id_counter": continue
+        try:
+            # Chỉ lấy field username để check cho nhẹ
+            stored_name = r.hget(key, "username")
+            if stored_name == username:
+                return r.hgetall(key)
+        except: continue
 
+    # 2. Tạo User mới
+    new_id = r.incr("user_id_counter") 
+    user_key = f"user:{new_id}"
+    
+    new_user_data = {
+        "user_id": str(new_id),
+        "username": username,
+        "role": "user",
+        "usd": 1000.0,   # Tặng 1000 USD
+        "btc": 1.0,      # Tặng 1 BTC
+        "reserved_usd": 0.0,
+        "reserved_btc": 0.0
+    }
+    r.hset(user_key, mapping=new_user_data)
+    return new_user_data
+
+def get_user_balance(user_id: str):
+    # Admin check
     user_key = f"user:{user_id}"
-    balance_key = f"user:{user_id}:balance"
+    
+    # Nếu là admin nhưng chưa có trong DB thì init luôn
+    if user_id == "0" and not r.exists(user_key):
+        init_admin_account()
 
-    # Kiểm tra xem user có tồn tại không
-    if not redis_client.exists(user_key):
-        return {"success": False, "message": "User ID không tồn tại."}
+    if not r.exists(user_key):
+        return None 
+        
+    data = r.hgetall(user_key)
+    
+    # Helper convert float an toàn
+    def safe_float(val):
+        try: return float(val)
+        except: return 0.0
 
-    # 2. Xóa dữ liệu (Dùng pipeline để xóa sạch cả 2 key cùng lúc)
-    pipe = redis_client.pipeline()
-    pipe.delete(user_key)
-    pipe.delete(balance_key)
-    pipe.execute()
+    data["usd"] = safe_float(data.get("usd"))
+    data["btc"] = safe_float(data.get("btc"))
+    data["reserved_usd"] = safe_float(data.get("reserved_usd"))
+    data["reserved_btc"] = safe_float(data.get("reserved_btc"))
+    
+    return data
 
-    return {"success": True, "message": f"Đã xóa User ID {user_id}"}
+def get_all_users_logic():
+    """
+    Lấy danh sách user tối ưu bằng Pipeline
+    """
+    # 1. Lấy ID lớn nhất hiện tại
+    max_id = r.get("user_id_counter")
+    if not max_id:
+        # Nếu chưa có user nào, thử check admin
+        if r.exists("user:0"):
+            max_id = 0
+        else:
+            return []
+    
+    max_id = int(max_id)
+    
+    # 2. Dùng Pipeline để gom lệnh (Tối ưu tốc độ)
+    pipe = r.pipeline()
+    # Quét từ 0 (Admin) đến max_id
+    for i in range(0, max_id + 1):
+        pipe.hgetall(f"user:{i}")
+        
+    results = pipe.execute()
+    
+    # 3. Xử lý kết quả
+    users = []
+    for data in results:
+        if data and "user_id" in data:
+            # Convert số liệu
+            try: 
+                data["usd"] = float(data.get("usd", 0))
+                data["btc"] = float(data.get("btc", 0))
+            except: pass
+            users.append(data)
+            
+    return users
+
+def delete_user_logic(user_id: str):
+    # 1. Chặn xóa Admin
+    if str(user_id) == "0":
+        return {"success": False, "message": "Không thể xóa tài khoản Admin"}
+    
+    user_key = f"user:{user_id}"
+    if not r.exists(user_key):
+        return {"success": False, "message": "User không tồn tại"}
+    
+    try:
+        # Xóa key user
+        r.delete(user_key)
+        # Nếu sau này có key balance riêng thì xóa thêm ở đây
+        # r.delete(f"user:{user_id}:balance")
+        return {"success": True, "message": f"Đã xóa user {user_id}"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}

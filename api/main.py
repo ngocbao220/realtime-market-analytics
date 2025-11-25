@@ -1,66 +1,100 @@
-"""
-FastAPI Backend for Dashboard
-"""
-
 import logging
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from services.user_service import init_admin_account
-from routes import trades, stats, orderbook, symbols, user
-from routes.matching_engine import orders
-from routes.matching_engine import trades as matching_trades
 
+# --- IMPORT SERVICES ---
+# [ĐÃ SỬA] Bỏ dấu chấm phía trước để thành Absolute Import
+from services.user_service import init_admin_account
+
+# --- IMPORT ROUTERS ---
+# [ĐÃ SỬA] Bỏ dấu chấm phía trước
+try:
+    from routes import user, orderbook, kline, market
+except ImportError as e:
+    print(f"❌ Lỗi Import Routes: {e}")
+    raise e
+
+# [OPTIONAL] Import các router cũ chưa refactor
+try:
+    from routes import stats, symbols
+except ImportError:
+    from fastapi import APIRouter
+    stats = symbols = type('obj', (object,), {'router': APIRouter()})
+
+# --- CẤU HÌNH LOGGING ---
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     force=True
 )
 
-print("Đang tạo Admin thủ công...")
-init_admin_account()
-print("Xong! Đã tạo Admin thủ công!!")
+# --- LIFESPAN ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logging.info("🚀 Starting Trading Backend...")
+    
+    # DEBUG: In ra danh sách API đang chạy
+    print("\n" + "="*40)
+    print("🔍  DANH SÁCH API ĐANG HOẠT ĐỘNG:")
+    for route in app.routes:
+        if hasattr(route, "path"):
+            methods = ", ".join(route.methods)
+            print(f"📍 {methods:<10} {route.path}")
+    print("="*40 + "\n")
 
-app = FastAPI(title="BinanceAPI", version="1.0.0")
+    try:
+        init_admin_account() 
+        logging.info("✅ Admin account verified/created.")
+    except Exception as e:
+        logging.error(f"❌ Failed to init admin: {e}")
+    
+    yield
+    logging.info("🛑 Shutting down...")
 
-# CORS để frontend có thể gọi API
+# --- KHỞI TẠO APP ---
+app = FastAPI(title="BinanceAPI Hybrid", version="2.0.0", lifespan=lifespan)
+
+# --- CẤU HÌNH CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Root endpoint
+# --- ĐĂNG KÝ ROUTER ---
+# 1. User
+app.include_router(user.router) 
+
+# 2. Orderbook
+app.include_router(orderbook.router)
+
+# 3. Market Data
+app.include_router(kline.router)
+app.include_router(market.router)
+
+# 4. Các Router cũ
+app.include_router(stats.router, prefix="/api/stats", tags=["Statistics"])
+app.include_router(symbols.router, prefix="/api/symbols", tags=["Symbols"])
+
+# --- ROOT ENDPOINT ---
 @app.get("/")
 def root():
-    """Health check"""
     return {
         "status": "ok",
-        "message": "API is running",
+        "message": "Modular Trading Backend is Running",
         "endpoints": {
-            "trades": "/api/trades", 
-            "stats": "/api/stats",
-            "price-history": "/api/price-history",
-            "orderbook": "/api/orderbook",
-            "realtime": "/api/realtime",
-            "symbols": "/api/symbols"
+            "user": "/user",
+            "orders": "/orders",
+            "kline": "/api/kline/{symbol}",
+            "tickers": "/api/market/tickers",
+            "docs": "/docs"
         }
     }
 
-# Include routers
-app.include_router(stats.router, prefix="/api", tags=["Statistics"])
-app.include_router(trades.router, prefix="/api", tags=["Trades"])
-app.include_router(orderbook.router, prefix="/api", tags=["Orderbook"])
-app.include_router(symbols.router, prefix="/api", tags=["Symbols"])
-
-app.include_router(user.router, prefix="/user", tags=["User"])
-
-app.include_router(orders.router, prefix="/orders", tags=["OrderBook"])
-app.include_router(matching_trades.router, prefix="/trades", tags=["Trades Matching"])
-
 if __name__ == "__main__":
     import uvicorn
+    # Chạy trực tiếp file này
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
