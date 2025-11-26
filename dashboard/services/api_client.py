@@ -65,17 +65,19 @@ def api_get_balance(user_id):
 # 3. TRADING (Đặt lệnh)
 # ==========================================
 
-def api_place_order(user_id, side, price, amount):
+def api_place_order(user_id, symbol, side, price, amount):
     """
     side: 'buy' hoặc 'sell'
     Trả về tuple: (Success: bool, Message/Data) để frontend dễ xử lý
     """
     payload = {
         "user_id": str(user_id),
+        "symbol": str(symbol),  
+        "side": str(side),
         "price": float(price),
         "amount": float(amount)
     }
-    result = _request("POST", f"/orders/{side}", json_data=payload)
+    result = _request("POST", "/orders", json_data=payload)
     
     if result and result.get("status") == "success":
         return True, result

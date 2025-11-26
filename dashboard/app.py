@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 import pandas as pd
 from chart import show_chart
 from components.login import show_login
@@ -123,42 +124,61 @@ def main():
             show_chart()
             st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
             
-            # --- Form Đặt Lệnh ---
+
+            # === [ĐÃ CẬP NHẬT] Form Đặt Lệnh ===
             st.markdown("<div style='display:flex;gap:24px;'>", unsafe_allow_html=True)
             col_buy, col_sell = st.columns(2)
             
+            # FORM MUA
             with col_buy:
                 st.markdown("<div style='background:#23272f;padding:18px 24px;border-radius:14px;margin-bottom:12px;'>", unsafe_allow_html=True)
                 st.markdown("<div style='font-size:18px;font-weight:700;color:#00c076;margin-bottom:4px;'>Đặt lệnh Mua (Buy)</div>", unsafe_allow_html=True)
                 st.markdown(f"<div style='color:#aaa;font-size:15px;'>Số dư khả dụng: <span style='color:#fff'>{user.get('usd', 0):,.2f} USD</span></div>", unsafe_allow_html=True)
                 
-                buy_price = st.number_input("Giá đặt mua (USD)", value=50000.00, step=0.01, key="buy_price")
-                buy_amount = st.number_input("Số lượng mua (BTC)", value=0.01, step=0.01, key="buy_amount")
+                # Input giá và số lượng
+                buy_price = st.number_input("Giá đặt mua (USD)", value=50000.00, step=10.0, key="buy_price")
+                buy_amount = st.number_input("Số lượng mua (Coin)", value=0.01, step=0.001, format="%.4f", key="buy_amount")
                 
-                if st.button("Giao dịch Mua", key="buy_btn", type="primary"):
-                    success, msg = api_place_order(user.get('user_id'), "buy", buy_price, buy_amount)
-                    if success:
-                        st.success(f"✅ Mua thành công: {msg.get('message', '')}")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ Lỗi: {msg}")
+                if st.button("Giao dịch Mua", key="buy_btn", type="primary", use_container_width=True):
+                    with st.spinner("Đang gửi lệnh..."):
+                        # Gọi API với thêm tham số current_symbol
+                        success, msg = api_place_order(user.get('user_id'), current_symbol, "buy", buy_price, buy_amount)
+                        
+                        if success:
+                            txt = msg.get('message', 'Thành công') if isinstance(msg, dict) else str(msg)
+                            st.success(f"✅ {txt}")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Lỗi: {msg}")
                 st.markdown("</div>", unsafe_allow_html=True)
 
+            # FORM BÁN
             with col_sell:
                 st.markdown("<div style='background:#23272f;padding:18px 24px;border-radius:14px;margin-bottom:12px;'>", unsafe_allow_html=True)
                 st.markdown("<div style='font-size:18px;font-weight:700;color:#f6465d;margin-bottom:4px;'>Đặt lệnh Bán (Sell)</div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='color:#aaa;font-size:15px;'>Số dư khả dụng: <span style='color:#fff'>{user.get('btc', 0):.6f} BTC</span></div>", unsafe_allow_html=True)
+                # Lưu ý: Hiển thị số dư Coin (BTC hoặc coin khác tương ứng với symbol)
+                # Ở đây tạm để BTC, nếu muốn dynamic thì phải parse current_symbol (ví dụ lấy 'ETH' từ 'ETHUSDT')
+                coin_name = "BTC" if "BTC" in current_symbol else "Coin" 
+                balance_coin = user.get('btc', 0) # Cần logic lấy balance theo coin nếu mở rộng nhiều coin
                 
-                sell_price = st.number_input("Giá đặt bán (USD)", value=50000.00, step=0.01, key="sell_price")
-                sell_amount = st.number_input("Số lượng bán (BTC)", value=0.01, step=0.01, key="sell_amount")
+                st.markdown(f"<div style='color:#aaa;font-size:15px;'>Số dư khả dụng: <span style='color:#fff'>{balance_coin:.6f} {coin_name}</span></div>", unsafe_allow_html=True)
                 
-                if st.button("Giao dịch Bán", key="sell_btn", type="primary"):
-                    success, msg = api_place_order(user.get('user_id'), "sell", sell_price, sell_amount)
-                    if success:
-                        st.success(f"✅ Bán thành công: {msg.get('message', '')}")
-                        st.rerun()
-                    else:
-                        st.error(f"❌ Lỗi: {msg}")
+                sell_price = st.number_input("Giá đặt bán (USD)", value=50000.00, step=10.0, key="sell_price")
+                sell_amount = st.number_input("Số lượng bán (Coin)", value=0.01, step=0.001, format="%.4f", key="sell_amount")
+                
+                if st.button("Giao dịch Bán", key="sell_btn", type="primary", use_container_width=True):
+                    with st.spinner("Đang gửi lệnh..."):
+                        # Gọi API với thêm tham số current_symbol
+                        success, msg = api_place_order(user.get('user_id'), current_symbol, "sell", sell_price, sell_amount)
+                        
+                        if success:
+                            txt = msg.get('message', 'Thành công') if isinstance(msg, dict) else str(msg)
+                            st.success(f"✅ {txt}")
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Lỗi: {msg}")
                 st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
