@@ -123,3 +123,35 @@ def cancel_virtual_order(user_id: str, order_id: str):
 
     pipe.execute()
     return {"success": True, "msg": "Hủy lệnh thành công"}
+
+def get_user_open_orders(user_id: str):
+    """
+    Get list of user's open orders (NEW/PARTIAL)
+    """
+    # Key containing list of order IDs: user:{id}:open_orders
+    user_orders_key = KEY_USER_OPEN_ORDERS.format(user_id)
+    
+    # 1. Get all Order IDs in Set
+    order_ids = redis_client.smembers(user_orders_key)
+    
+    orders = []
+    for oid in order_ids:
+        # 2. Get details of each order
+        order_data = redis_client.hgetall(KEY_ORDER_DETAIL.format(oid))
+        if order_data:
+            try:
+                # Format return data
+                orders.append({
+                    "order_id": order_data.get("order_id"),
+                    "symbol": order_data.get("symbol"),
+                    "side": order_data.get("side"), # bids/asks
+                    "price": float(order_data.get("price", 0)),
+                    "amount": float(order_data.get("amount", 0)),
+                    "filled": float(order_data.get("filled_amount", 0)),
+                    "status": order_data.get("status"),
+                    "time": float(order_data.get("timestamp_created", 0))
+                })
+            except: continue
+            
+    # 3. Sort: Newest orders first
+    return sorted(orders, key=lambda x: x["time"], reverse=True)
