@@ -86,6 +86,19 @@ def api_place_order(user_id, symbol, side, price, amount):
     detail = result.get("detail", "Lỗi không xác định") if result else "Lỗi kết nối"
     return False, detail
 
+# --- [THÊM MỚI] Hàm lấy lệnh đang treo ---
+def get_my_open_orders(user_id):
+    """Lấy danh sách lệnh chờ của user"""
+    data = _request("GET", f"/orders/user/{user_id}")
+    return data if isinstance(data, list) else []
+
+# --- [THÊM MỚI] Hàm hủy lệnh ---
+def api_cancel_order(order_id, user_id):
+    result = _request("DELETE", f"/orders/{order_id}", params={"user_id": user_id})
+    if result and result.get("status") == "success":
+        return True, result.get("message")
+    return False, result.get("detail") if result else "Lỗi kết nối"
+
 # ==========================================
 # 4. ADMIN FEATURES (Quản lý User)
 # ==========================================
