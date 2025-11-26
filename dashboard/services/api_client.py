@@ -33,12 +33,12 @@ def _request(method, endpoint, params=None, json_data=None):
 # 1. MARKET DATA (Kline, Ticker, Trades)
 # ==========================================
 
-def get_kline(symbol, interval, limit=500):
+def get_kline(symbol, interval, limit=30):
     data = _request("GET", f"/kline/get/{symbol}", {"interval": interval, "limit": limit})
     return data.get("data", []) if data else []
 
 def get_tickers():
-    return _request("GET", "/ticker/get") or []
+    return _request("GET", f"/ticker/get") or []
 
 def get_orderbook(symbol):
     return _request("GET", f"/market/orderbook/{symbol}") or {"bids": [], "asks": []}
