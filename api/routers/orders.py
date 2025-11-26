@@ -12,7 +12,7 @@ class PlaceOrderRequest(BaseModel):
     price: float
     amount: float
 
-@router.post("")
+@router.post("/")
 def place_order(order: PlaceOrderRequest):
     """
     Đặt lệnh mới (Mua hoặc Bán)

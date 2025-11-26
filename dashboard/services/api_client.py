@@ -79,7 +79,7 @@ def api_place_order(user_id, symbol, side, price, amount):
     }
     result = _request("POST", "/orders", json_data=payload)
     
-    if result and result.get("status") == "success":
+    if result and ("message" in result or "order_id" in result):
         return True, result
     
     # Xử lý lỗi
