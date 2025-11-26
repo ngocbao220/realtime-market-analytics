@@ -34,17 +34,17 @@ def _request(method, endpoint, params=None, json_data=None):
 # ==========================================
 
 def get_kline(symbol, interval, limit=500):
-    data = _request("GET", f"/api/kline/{symbol}", {"interval": interval, "limit": limit})
+    data = _request("GET", f"/kline/get/{symbol}", {"interval": interval, "limit": limit})
     return data.get("data", []) if data else []
 
 def get_tickers():
-    return _request("GET", "/api/market/tickers") or []
+    return _request("GET", "/ticker/get") or []
 
 def get_orderbook(symbol):
-    return _request("GET", f"/api/orderbook/{symbol}") or {"bids": [], "asks": []}
+    return _request("GET", f"/market/orderbook/{symbol}") or {"bids": [], "asks": []}
 
 def get_recent_trades(symbol, limit=20):
-    return _request("GET", f"/api/trades/{symbol}", {"limit": limit}) or []
+    return _request("GET", f"/market/trades/{symbol}", {"limit": limit}) or []
 
 # ==========================================
 # 2. USER & AUTH (Đăng nhập, Số dư)
