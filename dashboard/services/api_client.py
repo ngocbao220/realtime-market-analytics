@@ -38,7 +38,7 @@ def get_kline(symbol, interval, limit=30):
     return data.get("data", []) if data else []
 
 def get_tickers():
-    return _request("GET", f"/ticker/get") or []
+    return _request("GET", "/ticker/get") or []
 
 def get_orderbook(symbol):
     return _request("GET", f"/market/orderbook/{symbol}") or {"bids": [], "asks": []}
