@@ -1,0 +1,1 @@
+// Trang này hiển thị Info mã Coin khác

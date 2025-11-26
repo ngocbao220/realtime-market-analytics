@@ -1,0 +1,1 @@
+// Trang này hiển thị Tickers + Nút gọi AI
