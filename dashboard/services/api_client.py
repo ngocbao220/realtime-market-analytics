@@ -56,10 +56,10 @@ def api_login(username):
     Backend đã tự xử lý logic: Nếu user tồn tại thì trả về, chưa thì tạo mới.
     Nếu username là 'admin', backend trả về ID 0.
     """
-    return _request("POST", "/user/create", json_data={"username": username})
+    return _request("POST", "/users/create", json_data={"username": username})
 
 def api_get_balance(user_id):
-    return _request("GET", f"/user/get/{user_id}")
+    return _request("GET", f"/users/{user_id}")
 
 # ==========================================
 # 3. TRADING (Đặt lệnh)
