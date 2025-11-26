@@ -5,12 +5,12 @@ from services import user_service
 # Prefix chung là /users, không cần lặp lại chữ 'user' trong từng hàm
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.post("")
+@router.post("/create")
 def create_user(user: UserRequest):
     """Tạo người dùng mới"""
     return user_service.create_new_user(user.username)
 
-@router.get("")
+@router.get("/get_all")
 def get_all_users():
     """Lấy danh sách tất cả người dùng"""
     return user_service.get_all_users_logic()

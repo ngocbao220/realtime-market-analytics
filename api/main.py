@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from services.user_service import init_special_account
-from routers import users, orders, market
+from routers import users, orders, market, klines
 
 # --- CẤU HÌNH LOGGING ---
 logging.basicConfig(
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(orders.router)
 app.include_router(market.router)
+app.include_router(klines.router)
 
 # --- ROOT ENDPOINT ---
 @app.get("/")
