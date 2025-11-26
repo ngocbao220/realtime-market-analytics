@@ -25,47 +25,35 @@ if 'is_admin' not in st.session_state:
 
 # --- UI ĐĂNG NHẬP ---
 def show_login():
-    st.set_page_config(page_title="Crypto Login", layout="centered")
-    st.title("Sàn Giao Dịch Giả Lập")
-    st.markdown("---")
-
-    logging.info("🖥️ Rendering login page...")
-
+    """
+    Hiển thị form đăng nhập.
+    """
     col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col2:
-        st.info("Nhập tên của bạn!")
-
+        st.markdown("### 🔐 Đăng nhập hệ thống")
+        
         with st.form("login_form"):
-            username = st.text_input("Tên Trader:", placeholder="VD: traderPro")
-            submitted = st.form_submit_button("🚀 Truy cập hệ thống", use_container_width=True)
-
+            username = st.text_input("Tên đăng nhập", placeholder="Nhập tên của bạn (ví dụ: admin)")
+            submitted = st.form_submit_button("Truy cập Dashboard", type="primary", use_container_width=True)
+            
             if submitted:
-                if not username.strip():
-                    st.warning("Vui lòng nhập tên!")
-                    logging.warning("⚠️ Login attempt with empty username.")
-                else:
-                    logging.info(f"🔄 Login request triggered for: {username}")
+                if not username:
+                    st.warning("Vui lòng nhập tên đăng nhập.")
+                    return
 
-                    with st.spinner("Đang kết nối tới Blockchain (Redis)..."):
-                        user_data = api_login(username)
-
+                with st.spinner("Đang kết nối tới Backend..."):
+                    # Gọi API Login thông qua Client Service
+                    user_data = api_login(username)
+                    
                     if user_data and "user_id" in user_data:
-                        role = user_data.get("role", "user")
-                        logging.info(f"✅ Login successful: {user_data}")
-
+                        st.success(f"Đăng nhập thành công! Xin chào {user_data.get('username')}")
+                        
+                        # Lưu session
                         st.session_state['user_info'] = user_data
-                        st.session_state['is_admin'] = (role == "admin")
-
-                        if role == "admin":
-                            st.success(f"Xin chào ADMIN! (ID: {user_data.get('user_id')})")
-                        else:
-                            st.success("Đăng nhập thành công!")
-
+                        
+                        # Reload lại trang để vào Dashboard chính
                         time.sleep(0.5)
-                        logging.info("🔁 Reloading UI after login.")
                         st.rerun()
-
                     else:
-                        logging.error(f"❌ Login failed. Response: {user_data}")
-                        if user_data and "detail" in user_data:
-                            st.error(f"Lỗi: {user_data['detail']}")
+                        st.error("Đăng nhập thất bại. Backend không phản hồi hoặc lỗi kết nối.")

@@ -37,6 +37,7 @@ def get_tickers():
                 
                 results.append({
                     "symbol": symbol,
+                    "price": close_p,
                     "open": open_p,
                     "close": close_p,
                     "change": round(change, 2),

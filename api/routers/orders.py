@@ -43,3 +43,11 @@ def cancel_order(order_id: str, user_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Order not found or cannot be cancelled")
     return {"message": "Order cancelled successfully"}
+
+@router.get("/user/{user_id}")
+def get_my_orders(user_id: str):
+    """
+    Lấy danh sách lệnh đang chờ khớp của User
+    Endpoint: GET /orders/user/{user_id}
+    """
+    return order_service.get_user_open_orders(user_id)

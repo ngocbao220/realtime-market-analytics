@@ -33,18 +33,18 @@ def _request(method, endpoint, params=None, json_data=None):
 # 1. MARKET DATA (Kline, Ticker, Trades)
 # ==========================================
 
-def get_kline(symbol, interval, limit=500):
-    data = _request("GET", f"/api/kline/{symbol}", {"interval": interval, "limit": limit})
+def get_kline(symbol, interval, limit=30):
+    data = _request("GET", f"/kline/get/{symbol}", {"interval": interval, "limit": limit})
     return data.get("data", []) if data else []
 
 def get_tickers():
-    return _request("GET", "/api/market/tickers") or []
+    return _request("GET", "/ticker/get") or []
 
 def get_orderbook(symbol):
-    return _request("GET", f"/api/orderbook/{symbol}") or {"bids": [], "asks": []}
+    return _request("GET", f"/market/orderbook/{symbol}") or {"bids": [], "asks": []}
 
 def get_recent_trades(symbol, limit=20):
-    return _request("GET", f"/api/trades/{symbol}", {"limit": limit}) or []
+    return _request("GET", f"/market/trades/{symbol}", {"limit": limit}) or []
 
 # ==========================================
 # 2. USER & AUTH (Đăng nhập, Số dư)
@@ -52,37 +52,52 @@ def get_recent_trades(symbol, limit=20):
 
 def api_login(username):
     """
-    Đăng nhập hoặc tạo user mới.    
+    Đăng nhập hoặc tạo user mới.
     Backend đã tự xử lý logic: Nếu user tồn tại thì trả về, chưa thì tạo mới.
     Nếu username là 'admin', backend trả về ID 0.
     """
-    return _request("POST", "/user/create", json_data={"username": username})
+    return _request("POST", "/users/create", json_data={"username": username})
 
 def api_get_balance(user_id):
-    return _request("GET", f"/user/get/{user_id}")
+    return _request("GET", f"/users/{user_id}")
 
 # ==========================================
 # 3. TRADING (Đặt lệnh)
 # ==========================================
 
-def api_place_order(user_id, side, price, amount):
+def api_place_order(user_id, symbol, side, price, amount):
     """
     side: 'buy' hoặc 'sell'
     Trả về tuple: (Success: bool, Message/Data) để frontend dễ xử lý
     """
     payload = {
         "user_id": str(user_id),
+        "symbol": str(symbol),  
+        "side": str(side),
         "price": float(price),
         "amount": float(amount)
     }
-    result = _request("POST", f"/orders/{side}", json_data=payload)
+    result = _request("POST", "/orders", json_data=payload)
     
-    if result and result.get("status") == "success":
+    if result and ("message" in result or "order_id" in result):
         return True, result
     
     # Xử lý lỗi
     detail = result.get("detail", "Lỗi không xác định") if result else "Lỗi kết nối"
     return False, detail
+
+# --- [THÊM MỚI] Hàm lấy lệnh đang treo ---
+def get_my_open_orders(user_id):
+    """Lấy danh sách lệnh chờ của user"""
+    data = _request("GET", f"/orders/user/{user_id}")
+    return data if isinstance(data, list) else []
+
+# --- [THÊM MỚI] Hàm hủy lệnh ---
+def api_cancel_order(order_id, user_id):
+    result = _request("DELETE", f"/orders/{order_id}", params={"user_id": user_id})
+    if result and result.get("status") == "success":
+        return True, result.get("message")
+    return False, result.get("detail") if result else "Lỗi kết nối"
 
 # ==========================================
 # 4. ADMIN FEATURES (Quản lý User)
