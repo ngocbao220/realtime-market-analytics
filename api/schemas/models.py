@@ -1,9 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class UserRequest(BaseModel):
     username: str
 
-class OrderRequest(BaseModel):
+class PlaceOrderRequest(BaseModel):
     user_id: str
+    symbol: str
+    side: str = Field(..., description="buy or sell") # 'buy' hoặc 'sell'
     price: float
     amount: float

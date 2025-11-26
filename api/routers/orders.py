@@ -1,16 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 from services import order_service 
+from schemas.models import PlaceOrderRequest
 
 router = APIRouter(prefix="/orders", tags=["Trading"])
-
-# Schema request body chuẩn cho đặt lệnh
-class PlaceOrderRequest(BaseModel):
-    user_id: str
-    symbol: str
-    side: str = Field(..., description="buy or sell") # 'buy' hoặc 'sell'
-    price: float
-    amount: float
 
 @router.post("")
 def place_order(order: PlaceOrderRequest):
@@ -39,15 +31,15 @@ def cancel_order(order_id: str, user_id: str):
     """
     # Cần logic lấy symbol/side từ order_id hoặc truyền thêm nếu service yêu cầu
     # Ở đây giả sử service tự tra cứu được từ order_id
-    success = order_service.cancel_order(order_id) 
+    success = order_service.cancel_virtual_order(order_id) 
     if not success:
         raise HTTPException(status_code=404, detail="Order not found or cannot be cancelled")
     return {"message": "Order cancelled successfully"}
 
-@router.get("/user/{user_id}")
+@router.get("/{user_id}")
 def get_my_orders(user_id: str):
     """
     Lấy danh sách lệnh đang chờ khớp của User
-    Endpoint: GET /orders/user/{user_id}
+    Endpoint: GET /orders/{user_id}
     """
     return order_service.get_user_open_orders(user_id)

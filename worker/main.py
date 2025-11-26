@@ -1,7 +1,7 @@
 import time
 import logging
 
-from logic import process_symbol
+from matching_engine import process_symbol
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - ENGINE - %(message)s")
 

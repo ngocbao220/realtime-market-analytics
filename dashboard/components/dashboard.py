@@ -3,8 +3,7 @@ import requests
 import pandas as pd
 import time
 from config import API_BASE_URL
-from src.user_api import api_get_all_users, api_delete_user
-from src.order_api import api_place_order
+from services.api_client import api
 
 # --- COMPONENT: GIAO DIỆN ADMIN ---
 def show_admin_panel():
@@ -20,7 +19,7 @@ def show_admin_panel():
             if st.button("🔄 Refresh"):
                 st.rerun()
             
-        all_users = api_get_all_users()
+        all_users = api.get_all_users()
         
         # Xử lý dữ liệu đầu vào
         user_list = []
@@ -92,7 +91,7 @@ def show_admin_panel():
                             continue
 
                         # Gọi API xóa
-                        success, _ = api_delete_user(user_id)
+                        success, _ = api.delete_user(user_id)
                         if success:
                             success_count += 1
                         else:
@@ -212,7 +211,7 @@ def show_dashboard():
                     else:
                         # Gọi API thật
                         with st.spinner("Đang gửi lệnh lên sàn..."):
-                            success, result = api_place_order(
+                            success, result = api.place_order(
                                 user_id=user.get('user_id'),
                                 side=side_api,
                                 price=price_input,

@@ -5,22 +5,14 @@ from chart import show_chart
 from components.login import show_login
 
 # [QUAN TRỌNG] Import thêm các hàm quản lý lệnh từ api_client
-from services.api_client import (
-    api_get_balance,
-    api_place_order,
-    get_tickers,
-    get_recent_trades,
-    get_orderbook,
-    get_my_open_orders, # Hàm mới lấy danh sách lệnh
-    api_cancel_order    # Hàm mới hủy lệnh
-)
+from services.api_client import api
 
 def main():
     st.set_page_config(layout="wide", page_title="Crypto Dashboard")
     
     if st.session_state.get('user_info') and 'user_id' in st.session_state['user_info']:
         user_id = st.session_state['user_info']['user_id']
-        refreshed_user = api_get_balance(user_id)
+        refreshed_user = api.get_user_info(user_id)
         # Cập nhật lại session nếu lấy được số dư mới
         if refreshed_user and "usd" in refreshed_user:
             st.session_state['user_info'] = refreshed_user
@@ -45,7 +37,7 @@ def main():
         current_symbol = st.session_state.get("chart_symbol", "BTCUSDT")
 
         # --- HEADER (Giữ nguyên code hiển thị giá của bạn) ---
-        all_tickers = get_tickers()
+        all_tickers = api.get_tickers()
         ticker = next((item for item in all_tickers if item["symbol"] == current_symbol), None)
         
         if ticker:
@@ -92,7 +84,7 @@ def main():
         # --- CỘT TRÁI: ORDER BOOK ---
         with col_left:
             st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;margin-top:12px;'>Sổ lệnh (Order Book)</div>", unsafe_allow_html=True)
-            ob_data = get_orderbook(current_symbol)
+            ob_data = api.get_orderbook(current_symbol)
             
             # Hiển thị Asks (Bán)
             asks = ob_data.get("asks", [])
@@ -149,7 +141,7 @@ def main():
                         st.warning("Số lượng và giá phải lớn hơn 0")
                     else:
                         with st.spinner("Đang gửi lệnh..."):
-                            success, msg = api_place_order(user.get('user_id'), current_symbol, "buy", buy_price, buy_amount)
+                            success, msg = api.place_order(user.get('user_id'), current_symbol, "buy", buy_price, buy_amount)
                             if success:
                                 txt = msg.get('message', 'Thành công') if isinstance(msg, dict) else str(msg)
                                 st.success(f"✅ {txt}")
@@ -181,7 +173,7 @@ def main():
                         st.warning("Số lượng và giá phải lớn hơn 0")
                     else:
                         with st.spinner("Đang gửi lệnh..."):
-                            success, msg = api_place_order(user.get('user_id'), current_symbol, "sell", sell_price, sell_amount)
+                            success, msg = api.place_order(user.get('user_id'), current_symbol, "sell", sell_price, sell_amount)
                             if success:
                                 txt = msg.get('message', 'Thành công') if isinstance(msg, dict) else str(msg)
                                 st.success(f"✅ {txt}")
@@ -196,7 +188,7 @@ def main():
         with col_right:
             st.markdown("<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;margin-top:12px;'>Giá các đồng (Markets)</div>", unsafe_allow_html=True)
             
-            tickers = get_tickers()
+            tickers = api.get_tickers()
             if tickers:
                 df_markets = pd.DataFrame(tickers)
                 st.dataframe(
@@ -215,7 +207,7 @@ def main():
 
             st.markdown(f"<div style='font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;text-align:center;'>Giao dịch khớp lệnh ({current_symbol})</div>", unsafe_allow_html=True)
             
-            recent_trades = get_recent_trades(current_symbol)
+            recent_trades = api.get_recent_trades(current_symbol)
             if recent_trades:
                 df_trades = pd.DataFrame(recent_trades)
                 st.dataframe(
@@ -237,7 +229,7 @@ def main():
         st.markdown("### 📋 Lệnh chờ khớp của tôi (Open Orders)")
         
         # Gọi API lấy danh sách lệnh đang treo
-        my_orders = get_my_open_orders(user.get('user_id'))
+        my_orders = api.get_open_orders(user.get('user_id'))
         
         if my_orders:
             # Tạo DataFrame hiển thị
@@ -273,7 +265,7 @@ def main():
                     # Nút Hủy Lệnh
                     if st.button("Hủy", key=f"cancel_{row.get('order_id')}"):
                         with st.spinner("Đang hủy..."):
-                            success, msg = api_cancel_order(row.get('order_id'), user.get('user_id'))
+                            success, msg = api.cancel_order(row.get('order_id'), user.get('user_id'))
                             if success:
                                 st.success("Đã hủy lệnh!")
                                 time.sleep(0.5)

@@ -3,6 +3,9 @@ import time
 import json
 from db import redis_client
 
+KEY_USER_OPEN_ORDERS = "user:{}:open_orders"
+KEY_ORDER_DETAIL = "order:virtual:{}" 
+
 # --- KEYS FORMAT ---
 # Để Lua script dễ xử lý, ta quy định format key rõ ràng
 # KEYS[1]: User Balance Hash
@@ -127,7 +130,6 @@ except:
     pass # Xử lý log lỗi nếu cần
 
 # --- HÀM PYTHON GỌI LUA ---
-
 def place_virtual_order(user_id: str, symbol: str, side: str, price: float, amount: float):
     # Chuẩn hóa input
     side = 'bids' if side in ['buy', 'bid'] else 'asks'
@@ -159,33 +161,120 @@ def place_virtual_order(user_id: str, symbol: str, side: str, price: float, amou
     except Exception as e:
         return {"success": False, "msg": f"System Error: {str(e)}"}
 
-def cancel_virtual_order(user_id: str, order_id: str):
-    # Cần lấy sơ bộ thông tin để biết symbol/side nhằm xác định Key Orderbook
-    # (Hoặc truyền symbol/side từ frontend lên để đỡ phải query)
-    order_key = f"order:virtual:{order_id}"
-    meta = redis_client.hmget(order_key, ["symbol", "side"])
+def save_order_history(pipe, order_id, user_id, symbol, side, price, amount, filled_qty, status, timestamp):
+    """
+    Ghi log trạng thái lệnh vào danh sách lịch sử user.
+    Key: user:{id}:order_history
+    """
+    history_key = f"user:{user_id}:order_history"
     
-    if not meta[0] or not meta[1]:
+    record = {
+        "order_id": order_id,
+        "symbol": symbol,
+        "side": side,
+        "type": "LIMIT",
+        "price": float(price),
+        "amount": float(amount),
+        "filled": float(filled_qty), # Số lượng đã khớp được trước khi hủy
+        "status": status,            # Ở đây sẽ là "CANCELLED"
+        "time": timestamp
+    }
+    
+    pipe.lpush(history_key, json.dumps(record))
+    pipe.ltrim(history_key, 0, 199) # Giữ 200 log gần nhất
+
+# --- HÀM HỦY LỆNH CHÍNH ---
+def cancel_virtual_order(user_id: str, order_id: str):
+    order_key = f"order:virtual:{order_id}"
+    
+    # 1. Lấy thông tin chi tiết lệnh (Cần lấy thêm Price, Amount, Filled để ghi log)
+    # Fields: symbol, side, price, amount, filled_amount
+    fields = ["symbol", "side", "price", "amount", "filled_amount"]
+    meta = redis_client.hmget(order_key, fields)
+    
+    # Kiểm tra dữ liệu
+    if not meta[0]: 
         return {"success": False, "msg": "Lệnh không tồn tại"}
     
     symbol = meta[0]
     side = meta[1]
+    price = float(meta[2] or 0)
+    amount = float(meta[3] or 0)
+    filled_amount = float(meta[4] or 0)
 
     try:
+        # 2. Gọi Lua Script để Hủy và Hoàn tiền (Atomic)
         res = redis_client.evalsha(
             cancel_order_sha,
             4,
-            order_key,
-            f"orderbook:virtual:{symbol}:{side}",
-            f"user:{user_id}:open_orders",
-            f"user:{user_id}:balance",
-            order_id, user_id
+            order_key,                              # KEYS[1]
+            f"orderbook:virtual:{symbol}:{side}",   # KEYS[2]
+            f"user:{user_id}:open_orders",          # KEYS[3]
+            f"user:{user_id}:balance",              # KEYS[4]
+            order_id, user_id                       # ARGV
         )
 
+        # Kiểm tra lỗi từ Lua
         if res and 'err' in res:
              return {"success": False, "msg": res['err']}
+        
+        # 3. GHI LOG ORDER HISTORY (Nếu Lua chạy thành công)
+        # Lúc này tiền đã về ví, lệnh đã xóa khỏi sổ lệnh.
+        # Ta ghi nhận trạng thái cuối cùng là CANCELLED.
+        pipe = redis_client.pipeline()
+        
+        save_order_history(
+            pipe=pipe,
+            order_id=order_id,
+            user_id=user_id,
+            symbol=symbol,
+            side=side,
+            price=price,
+            amount=amount,
+            filled_qty=filled_amount, # Giữ nguyên số lượng đã khớp (nếu có)
+            status="CANCELLED",
+            timestamp=time.time()
+        )
+        
+        pipe.execute()
         
         return {"success": True, "msg": "Hủy lệnh thành công"}
 
     except Exception as e:
         return {"success": False, "msg": f"System Error: {str(e)}"}
+    
+def get_user_open_orders(user_id: str):
+    """
+    Get list of user's open orders (NEW/PARTIAL)
+    """
+    # Key containing list of order IDs: user:{id}:open_orders
+    user_orders_key = KEY_USER_OPEN_ORDERS.format(user_id)
+    
+    # 1. Get all Order IDs in Set
+    order_ids = redis_client.smembers(user_orders_key)
+    
+    orders = []
+    for oid in order_ids:
+        # 2. Get details of each order
+        order_data = redis_client.hgetall(KEY_ORDER_DETAIL.format(oid))
+        
+        if order_data:
+            try:
+                # Check status
+                order_status = order_data.get("status")
+                if order_status != "FILLED" or "CANCELED":
+                    # Format return data
+                    orders.append({
+                        "order_id": order_data.get("order_id"),
+                        "symbol": order_data.get("symbol"),
+                        "side": order_data.get("side"), # bids/asks
+                        "price": float(order_data.get("price", 0)),
+                        "amount": float(order_data.get("amount", 0)),
+                        "filled": float(order_data.get("filled_amount", 0)),
+                        "status": order_data.get("status"),
+                        "time": float(order_data.get("timestamp_created", 0))
+                    })
+            except: continue
+            
+    # 3. Sort: Newest orders first
+    return sorted(orders, key=lambda x: x["time"], reverse=True)

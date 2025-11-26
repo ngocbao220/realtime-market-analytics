@@ -3,8 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from streamlit_autorefresh import st_autorefresh
 
-# [ĐÃ SỬA] Import từ service chung thay vì src cũ
-from services.api_client import get_kline
+from services.api_client import api
 
 def show_chart():
     # 1. Auto Refresh mỗi 3 giây
@@ -30,7 +29,7 @@ def show_chart():
 
     # 2. Gọi API qua Service mới
     # Hàm get_kline này nằm trong services/api_client.py
-    kline_data = get_kline(symbol, interval)
+    kline_data = api.get_kline(symbol, interval)
 
     if kline_data and len(kline_data) > 0:
         df = pd.DataFrame(kline_data)

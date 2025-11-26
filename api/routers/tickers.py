@@ -4,6 +4,6 @@ from services import ticker_service
 router = APIRouter(tags=["Tickers"])
 
 # Dùng để hiển thị OCLH trong 24h
-@router.get("/tickers/get")
+@router.get("/tickers/")
 def get_tickers():
     return ticker_service.get_tickers()

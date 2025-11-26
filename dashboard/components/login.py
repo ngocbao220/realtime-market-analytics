@@ -3,7 +3,7 @@ import requests
 import time
 import logging
 
-from services.api_client import api_login
+from services.api_client import api
 
 # CẤU HÌNH LOGGING
 logging.basicConfig(
@@ -44,7 +44,7 @@ def show_login():
 
                 with st.spinner("Đang kết nối tới Backend..."):
                     # Gọi API Login thông qua Client Service
-                    user_data = api_login(username)
+                    user_data = api.login_or_register(username)
                     
                     if user_data and "user_id" in user_data:
                         st.success(f"Đăng nhập thành công! Xin chào {user_data.get('username')}")
