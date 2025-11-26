@@ -41,12 +41,12 @@ def place_order_logic(user_id, side, price, amount):
             
     return {"status": "failed", "detail": "Lỗi tham số"}
 
-def get_orderbook_data(symbol: str, type: str = "real_market", side: str = "both") -> Union[List, Dict]:
+def get_orderbook_data(symbol: str, type: str = "real", side: str = "both") -> Union[List, Dict]:
     """
     Lấy dữ liệu Orderbook từ Redis ZSET.
     Args:
         symbol: BTCUSDT
-        type: "real_market" (hoặc virtual)
+        type: "real" (hoặc virtual)
         side: "bids", "asks", hoặc "both"
     """
     symbol = symbol.upper()
