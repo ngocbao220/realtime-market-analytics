@@ -24,3 +24,6 @@ PROCESSING_TIME="2 seconds"
 
 # Tốc độ lấy dữ liệu từ Redis
 SPEED = 0.3
+
+# Muốn lấy tối đa bao nhiêu
+ORDERBOOK_DEPTH=100 

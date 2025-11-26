@@ -52,7 +52,7 @@ def get_recent_trades(symbol, limit=20):
 
 def api_login(username):
     """
-    Đăng nhập hoặc tạo user mới.
+    Đăng nhập hoặc tạo user mới.    
     Backend đã tự xử lý logic: Nếu user tồn tại thì trả về, chưa thì tạo mới.
     Nếu username là 'admin', backend trả về ID 0.
     """

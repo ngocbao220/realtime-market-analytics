@@ -1,125 +1,191 @@
 import uuid
 import time
-import redis
+import json
 from db import redis_client
 
-# --- KEYS ---
-KEY_ORDER_DETAIL = "order:virtual:{}"         # Hash: Chi tiết lệnh
-KEY_ORDERBOOK = "orderbook:virtual:{}:{}"     # ZSet: orderbook:virtual:BTCUSDT:bids
-KEY_USER_OPEN_ORDERS = "user:{}:open_orders"  # Set: Danh sách lệnh đang treo của user
-KEY_USER_BALANCE = "user:{}:balance"          # Hash: Balance
+# --- KEYS FORMAT ---
+# Để Lua script dễ xử lý, ta quy định format key rõ ràng
+# KEYS[1]: User Balance Hash
+# KEYS[2]: Order Detail Hash
+# KEYS[3]: Orderbook ZSet
+# KEYS[4]: User Open Orders Set
+
+# --- LUA SCRIPT: PLACE ORDER ---
+LUA_PLACE_ORDER = """
+    local user_bal_key = KEYS[1]
+    local order_detail_key = KEYS[2]
+    local orderbook_key = KEYS[3]
+    local user_open_orders_key = KEYS[4]
+
+    local side = ARGV[1] -- 'bids' or 'asks'
+    local price = tonumber(ARGV[2])
+    local amount = tonumber(ARGV[3])
+    local total_cost = price * amount
+    local order_id = ARGV[4]
+    local timestamp = ARGV[5]
+    local symbol = ARGV[6]
+    local user_id = ARGV[7]
+
+    -- 1. KIỂM TRA SỐ DƯ
+    local avail_usd = tonumber(redis.call('HGET', user_bal_key, 'usd') or 0)
+    local avail_btc = tonumber(redis.call('HGET', user_bal_key, 'btc') or 0)
+
+    if side == 'bids' then
+        if avail_usd < total_cost then
+            return {err="Số dư USD không đủ"}
+        end
+        -- Trừ USD, Cộng Reserved USD
+        redis.call('HINCRBYFLOAT', user_bal_key, 'usd', -total_cost)
+        redis.call('HINCRBYFLOAT', user_bal_key, 'reserved_usd', total_cost)
+    else
+        if avail_btc < amount then
+            return {err="Số dư Coin không đủ"}
+        end
+        -- Trừ BTC, Cộng Reserved BTC
+        redis.call('HINCRBYFLOAT', user_bal_key, 'btc', -amount)
+        redis.call('HINCRBYFLOAT', user_bal_key, 'reserved_btc', amount)
+    end
+
+    -- 2. TẠO LỆNH (Hash)
+    redis.call('HSET', order_detail_key,
+        'order_id', order_id,
+        'user_id', user_id,
+        'symbol', symbol,
+        'side', side,
+        'type', 'LIMIT',
+        'price', price,
+        'amount', amount,
+        'filled_amount', 0,
+        'remaining_amount', amount,
+        'status', 'NEW',
+        'timestamp_created', timestamp
+    )
+
+    -- 3. CẬP NHẬT ORDERBOOK & INDEX
+    redis.call('ZADD', orderbook_key, price, order_id)
+    redis.call('SADD', user_open_orders_key, order_id)
+
+    return {ok="OK"}
+"""
+
+# --- LUA SCRIPT: CANCEL ORDER ---
+# Script này quan trọng để tránh Race Condition:
+# (Ví dụ: User bấm hủy đúng lúc lệnh vừa khớp xong -> Hủy lệnh đã khớp -> Sai tiền)
+LUA_CANCEL_ORDER = """
+    local order_key = KEYS[1]
+    local orderbook_key = KEYS[2]
+    local user_open_orders_key = KEYS[3]
+    local user_bal_key = KEYS[4]
+
+    local order_id = ARGV[1]
+    local user_id = ARGV[2]
+
+    -- 1. CHECK QUYỀN VÀ TRẠNG THÁI
+    local exists = redis.call('EXISTS', order_key)
+    if exists == 0 then return {err="Lệnh không tồn tại"} end
+
+    local owner = redis.call('HGET', order_key, 'user_id')
+    if owner ~= user_id then return {err="Không chính chủ"} end
+
+    local status = redis.call('HGET', order_key, 'status')
+    if status == 'FILLED' or status == 'CANCELLED' then
+        return {err="Không thể hủy (Lệnh đã khớp hoặc đã hủy)"}
+    end
+
+    -- 2. LẤY THÔNG TIN HOÀN TIỀN
+    local remaining = tonumber(redis.call('HGET', order_key, 'remaining_amount') or 0)
+    local price = tonumber(redis.call('HGET', order_key, 'price') or 0)
+    local side = redis.call('HGET', order_key, 'side')
+
+    if remaining <= 0 then return {err="Lệnh đã khớp hết"} end
+
+    -- 3. THỰC HIỆN HỦY
+    redis.call('ZREM', orderbook_key, order_id)
+    redis.call('SREM', user_open_orders_key, order_id)
+    redis.call('HSET', order_key, 'status', 'CANCELLED')
+    redis.call('HSET', order_key, 'amount', 0) -- Set về 0 để an toàn
+
+    -- 4. HOÀN TIỀN
+    if side == 'bids' then
+        local refund = remaining * price
+        redis.call('HINCRBYFLOAT', user_bal_key, 'reserved_usd', -refund)
+        redis.call('HINCRBYFLOAT', user_bal_key, 'usd', refund)
+    else
+        local refund = remaining
+        redis.call('HINCRBYFLOAT', user_bal_key, 'reserved_btc', -refund)
+        redis.call('HINCRBYFLOAT', user_bal_key, 'btc', refund)
+    end
+
+    return {ok="Đã hủy thành công"}
+"""
+
+# Load scripts 1 lần khi khởi động app
+try:
+    place_order_sha = redis_client.script_load(LUA_PLACE_ORDER)
+    cancel_order_sha = redis_client.script_load(LUA_CANCEL_ORDER)
+except:
+    pass # Xử lý log lỗi nếu cần
+
+# --- HÀM PYTHON GỌI LUA ---
 
 def place_virtual_order(user_id: str, symbol: str, side: str, price: float, amount: float):
-    """
-    Đặt lệnh Virtual:
-    1. Check số dư.
-    2. Trừ tiền khả dụng -> Cộng tiền đóng băng (Reserved).
-    3. Lưu lệnh vào Redis Orderbook.
-    """
     # Chuẩn hóa input
     side = 'bids' if side in ['buy', 'bid'] else 'asks'
     symbol = symbol.upper()
-    price = float(price)
-    amount = float(amount)
-    total_cost = price * amount
-    
-    user_bal_key = KEY_USER_BALANCE.format(user_id)
-    
-    # 1. KIỂM TRA SỐ DƯ (Optimistic Locking với WATCH)
-    # Trong thực tế production nên dùng Lua Script, ở đây dùng Watch cho dễ hiểu
-    with redis_client.pipeline() as pipe:
-        while True:
-            try:
-                pipe.watch(user_bal_key)
-                balance_data = pipe.hgetall(user_bal_key)
-                
-                avail_usd = float(balance_data.get("usd", 0))
-                avail_btc = float(balance_data.get("btc", 0))
+    order_id = str(uuid.uuid4())
+    timestamp = time.time()
 
-                # Check đủ tiền không
-                if side == 'bids': # Mua -> Cần USD
-                    if avail_usd < total_cost:
-                        return {"success": False, "msg": "Số dư USD không đủ"}
-                else: # Bán -> Cần BTC
-                    if avail_btc < amount:
-                        return {"success": False, "msg": "Số dư BTC không đủ"}
+    try:
+        # Gọi Lua Script
+        # Keys: [UserBal, OrderDetail, Orderbook, UserOpenOrders]
+        # Args: [side, price, amount, order_id, timestamp, symbol, user_id]
+        res = redis_client.evalsha(
+            place_order_sha,
+            4, # numkeys
+            f"user:{user_id}:balance",
+            f"order:virtual:{order_id}",
+            f"orderbook:virtual:{symbol}:{side}",
+            f"user:{user_id}:open_orders",
+            side, price, amount, order_id, timestamp, symbol, user_id
+        )
 
-                # 2. THỰC HIỆN TRANSACTION
-                pipe.multi() 
-                
-                # A. Trừ tiền & Đóng băng
-                if side == 'bids':
-                    pipe.hincrbyfloat(user_bal_key, "usd", -total_cost)
-                    pipe.hincrbyfloat(user_bal_key, "reserved_usd", total_cost)
-                else:
-                    pipe.hincrbyfloat(user_bal_key, "btc", -amount)
-                    pipe.hincrbyfloat(user_bal_key, "reserved_btc", amount)
+        # Lua trả về dict, ví dụ {ok="OK"} hoặc {err="Lỗi..."}
+        # redis-py có thể trả về bytes hoặc string tùy decode_responses
+        if res and 'err' in res:
+             return {"success": False, "msg": res['err']}
+        
+        return {"success": True, "msg": "Đặt lệnh thành công", "order_id": order_id}
 
-                # B. Tạo Lệnh
-                order_id = str(uuid.uuid4())
-                timestamp = time.time()
-                order_data = {
-                    "order_id": order_id, "user_id": user_id,
-                    "symbol": symbol, "side": side, "type": "LIMIT",
-                    "price": price, "amount": amount, 
-                    "filled_amount": 0.0, "remaining_amount": amount,
-                    "status": "NEW", "timestamp_created": timestamp
-                }
-                pipe.hset(KEY_ORDER_DETAIL.format(order_id), mapping=order_data)
-
-                # C. Đưa vào Sổ lệnh (ZSET: Score = Price)
-                zset_key = KEY_ORDERBOOK.format(symbol, side)
-                pipe.zadd(zset_key, {order_id: price})
-
-                # D. Index vào danh sách lệnh của User
-                pipe.sadd(KEY_USER_OPEN_ORDERS.format(user_id), order_id)
-
-                pipe.execute()
-                return {"success": True, "msg": "Đặt lệnh thành công", "order_id": order_id}
-
-            except redis.WatchError:
-                # Nếu số dư bị thay đổi bởi luồng khác giữa chừng, retry
-                continue
-            except Exception as e:
-                return {"success": False, "msg": str(e)}
+    except Exception as e:
+        return {"success": False, "msg": f"System Error: {str(e)}"}
 
 def cancel_virtual_order(user_id: str, order_id: str):
-    """
-    Hủy lệnh: Hoàn tiền từ Reserved về Available
-    """
-    order_key = KEY_ORDER_DETAIL.format(order_id)
-    order_data = redis_client.hgetall(order_key)
+    # Cần lấy sơ bộ thông tin để biết symbol/side nhằm xác định Key Orderbook
+    # (Hoặc truyền symbol/side từ frontend lên để đỡ phải query)
+    order_key = f"order:virtual:{order_id}"
+    meta = redis_client.hmget(order_key, ["symbol", "side"])
     
-    if not order_data: return {"success": False, "msg": "Lệnh không tồn tại"}
-    if order_data.get("user_id") != str(user_id): return {"success": False, "msg": "Không chính chủ"}
-    if order_data.get("status") in ["FILLED", "CANCELLED"]: return {"success": False, "msg": "Không thể hủy"}
-
-    symbol = order_data["symbol"]
-    side = order_data["side"]
-    price = float(order_data["price"])
-    remaining = float(order_data["remaining_amount"])
-
-    if remaining <= 0: return {"success": False, "msg": "Lệnh đã khớp hết"}
-
-    pipe = redis_client.pipeline()
+    if not meta[0] or not meta[1]:
+        return {"success": False, "msg": "Lệnh không tồn tại"}
     
-    # 1. Xóa khỏi Orderbook và Index
-    pipe.zrem(KEY_ORDERBOOK.format(symbol, side), order_id)
-    pipe.srem(KEY_USER_OPEN_ORDERS.format(user_id), order_id)
-    
-    # 2. Update Status
-    pipe.hset(order_key, "status", "CANCELLED")
-    
-    # 3. Hoàn tiền
-    user_bal_key = KEY_USER_BALANCE.format(user_id)
-    if side == "bids":
-        refund = remaining * price
-        pipe.hincrbyfloat(user_bal_key, "reserved_usd", -refund)
-        pipe.hincrbyfloat(user_bal_key, "usd", refund)
-    else:
-        refund = remaining
-        pipe.hincrbyfloat(user_bal_key, "reserved_btc", -refund)
-        pipe.hincrbyfloat(user_bal_key, "btc", refund)
+    symbol = meta[0]
+    side = meta[1]
 
-    pipe.execute()
-    return {"success": True, "msg": "Hủy lệnh thành công"}
+    try:
+        res = redis_client.evalsha(
+            cancel_order_sha,
+            4,
+            order_key,
+            f"orderbook:virtual:{symbol}:{side}",
+            f"user:{user_id}:open_orders",
+            f"user:{user_id}:balance",
+            order_id, user_id
+        )
+
+        if res and 'err' in res:
+             return {"success": False, "msg": res['err']}
+        
+        return {"success": True, "msg": "Hủy lệnh thành công"}
+
+    except Exception as e:
+        return {"success": False, "msg": f"System Error: {str(e)}"}

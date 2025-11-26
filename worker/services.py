@@ -1,6 +1,5 @@
-from db import redis_client
 import json
-import time
+from config import redis_client
 
 def get_orderbook(symbol: str, type: str = "real", side: str = "both", limit: int = 100):
     """
@@ -82,6 +81,5 @@ def get_orderbook(symbol: str, type: str = "real", side: str = "both", limit: in
     # Thêm thông tin phụ trợ
     result["symbol"] = symbol
     result["type"] = type
-    result["timestamp"] = int(time.time() * 1000)
 
     return result

@@ -85,8 +85,6 @@ services:
       - "7077:7077"
     environment:
       - SPARK_MODE=master
-    volumes:
-      - ./data/processed:/data/processed
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     networks:
       - trading-network
@@ -103,9 +101,7 @@ services:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
       - SPARK_WORKER_CORES=2
-      - SPARK_WORKER_MEMORY=2g
-    volumes:
-      - ./data/processed:/data/processed
+      - SPARK_WORKER_MEMORY=4g
     ports:
       - "8081:8081"
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
@@ -126,7 +122,6 @@ services:
     volumes:
       - ./app:/app
       - ./jars:/extra-jars
-      - ./data/processed:/data/processed
       - ./checkpoints:/checkpoints
     environment:
       SPARK_MASTER_URL: spark://spark-master:7077

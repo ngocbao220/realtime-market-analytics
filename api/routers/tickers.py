@@ -1,9 +1,9 @@
 from fastapi import APIRouter
-from services import ticker_service, trades_service
+from services import ticker_service
 
 router = APIRouter(tags=["Tickers"])
 
 # Dùng để hiển thị OCLH trong 24h
-@router.get("/ticker/get")
+@router.get("/tickers/get")
 def get_tickers():
     return ticker_service.get_tickers()

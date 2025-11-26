@@ -3,8 +3,8 @@ import logging
 import time
 from datetime import datetime, timezone, timedelta
 
-INF_USD = 999999999.0
-INF_COIN = 999999999.0
+INF_USD = 9999999999999999.0
+INF_COIN = 999999.0
 
 # --- CÁC KEY REDIS ---
 KEY_USER_PROFILE = "user:{}:profile"   # Hash: user:{id}:profile

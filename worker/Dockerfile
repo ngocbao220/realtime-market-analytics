@@ -3,8 +3,8 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Cài thư viện redis
-RUN pip install redis
+RUN pip install redis requests
 
-COPY engine.py .
+COPY . .
 
-CMD ["python", "-u", "engine.py"]
+CMD ["python", "-u", "main.py"]

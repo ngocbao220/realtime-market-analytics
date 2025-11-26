@@ -2,7 +2,9 @@ import redis
 import json
 import time
 import datetime
-from config.setting import REDIS_HOST, REDIS_PORT, SPEED
+from config.setting import REDIS_HOST, REDIS_PORT, SPEED, ORDERBOOK_DEPTH
+
+r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
 # ==========================================
 # 1. HÀM GHI TRADES (Giao dịch khớp lệnh)
@@ -15,7 +17,6 @@ def write_trades_to_redis(batch_df, type="real"):
       - trade:latest:{symbol} -> Chi tiết lệnh vừa khớp (cho list recent trades)
     """
     def process_partition(iterator):
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
 
         last_exec_time = time.time()
@@ -49,73 +50,114 @@ def write_trades_to_redis(batch_df, type="real"):
 # ==========================================
 def write_orderbook_to_redis(batch_df, type='real'):
     """
-    Lưu Orderbook theo nguyên tắc:
-    - Score = Timestamp (Để Redis tự sắp xếp thời gian chuẩn xác 100%).
-    - Member = JSON String chứa toàn bộ data.
-    - Luôn giữ 50 bản ghi có Timestamp lớn nhất (Mới nhất).
+    Logic chuẩn: MERGE -> SORT -> TRIM
+    1. Merge: Cập nhật toàn bộ data mới vào Redis (không cắt input).
+    2. Sort: Redis ZSET tự động sắp xếp.
+    3. Trim: Chỉ giữ lại 100 lệnh tốt nhất trong Redis, xóa phần thừa ở cả ZSET và HASH.
+
+    Kết quả như sau:
+    - Đối với asks thì là 100 thằng có giá mua cao nhất
+    - Đối với bids thì là 100 thằng có giá bán thấp nhất
+    => Cả 2 thằng đều được sắp xếp từ thấp đến cao nên lúc lấy từ redis
+    để so lệnh khớp thì nhớ lấy thằng cuối cùng của bids để so s
     """
     def process_partition(iterator):
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         
-        last_exec_time = time.time()
         for row in iterator:
             data = row.asDict()
             symbol = data.get("Symbol")
             if not symbol: continue
 
-            # --- SỬA LỖI Ở ĐÂY ---
+            # Xử lý thời gian
             raw_time = data.get("Event_time")
-            
-            # 1. Xử lý Time String (để lưu vào JSON cho người đọc)
             if isinstance(raw_time, (datetime.datetime, datetime.time)):
-                # Nếu là object datetime -> Chuyển thành chuỗi String đẹp
                 readable_time_str = raw_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-                # Lấy timestamp số để làm Score sắp xếp
-                sort_score = raw_time.timestamp()
             else:
-                # Nếu là string hoặc số sẵn rồi
                 readable_time_str = str(raw_time)
-                sort_score = time.time()
 
-            # --- XỬ LÝ ASKS ---
-            ask_key = f"orderbook:{type}:{symbol}:asks"
+            # =========================================================
+            # 1. XỬ LÝ ASKS (BÁN) - TỪ THẤP ĐẾN CAO
+            # =========================================================
+
+            # Key để lưu lên redis
+            ask_z_key = f"orderbook:{type}:{symbol}:asks" 
+            ask_h_key = f"orderbook:{type}:{symbol}:asks:data"
+            
+            # Lấy dữ liệu từ kafka chuyển lên
             ask_prices = data.get("Ask_prices", [])
             ask_quantities = data.get("Ask_quantities", [])
 
+            # BƯỚC 1: MERGE (Cập nhật toàn bộ Input vào Redis)
             for p, q in zip(ask_prices, ask_quantities):
-                if float(q) > 0:    
-                    record = {
-                        "t": readable_time_str, 
-                        "p": float(p),
-                        "a": float(q)
-                    }
-                    # json.dumps giờ sẽ không lỗi nữa vì "t" là string
-                    pipe.zadd(ask_key, {json.dumps(record): sort_score})
+                price_str = str(p)
+                vol_float = float(q)
 
-            pipe.zremrangebyrank(ask_key, 0, -51)
+                if vol_float > 0:
+                    record = {"t": readable_time_str, "p": float(p), "a": vol_float}
+                    pipe.zadd(ask_z_key, {price_str: float(p)}) # Đoạn này đã sắp xếp từ thấp đến cao
+                    pipe.hset(ask_h_key, price_str, json.dumps(record))
+                else:
+                    # Nếu volume = 0 (lệnh hủy/khớp hết) -> Xóa ngay
+                    pipe.zrem(ask_z_key, price_str)
+                    pipe.hdel(ask_h_key, price_str)
 
-            # --- XỬ LÝ BIDS ---
-            bid_key = f"orderbook:{type}:{symbol}:bids"
+            # Thực thi việc Update trước để Redis có dữ liệu mới nhất
+            pipe.execute() 
+            
+            # BƯỚC 2 & 3: SORT & TRIM (Dọn dẹp rác sau khi đã Merge)
+            # Asks trong Redis xếp: [Rẻ nhất (0) ... Đắt nhất (-1)]
+            # Ta muốn giữ 0 -> 99. Xóa từ 100 -> Hết.
+            cleanup_pipe = r.pipeline()
+            
+            # Tìm danh sách thừa (nằm ngoài top 100)
+            excess_asks = r.zrange(ask_z_key, ORDERBOOK_DEPTH, -1)
+            
+            if excess_asks:
+                cleanup_pipe.zrem(ask_z_key, *excess_asks)     # Xóa trong Index
+                cleanup_pipe.hdel(ask_h_key, *excess_asks)     # Xóa trong Data Hash (Quan trọng!)
+
+
+            # =========================================================
+            # 2. XỬ LÝ BIDS (MUA) - TỪ CAO XUỐNG THẤP
+            # =========================================================
+            bid_z_key = f"orderbook:{type}:{symbol}:bids"
+            bid_h_key = f"orderbook:{type}:{symbol}:bids:data"
+            
             bid_prices = data.get("Bid_prices", [])
             bid_quantities = data.get("Bid_quantities", [])
 
+            # BƯỚC 1: MERGE
             for p, q in zip(bid_prices, bid_quantities):
-                if float(q) > 0:
-                    record = {
-                        "t": readable_time_str,
-                        "p": float(p),
-                        "a": float(q)
-                    }
-                    pipe.zadd(bid_key, {json.dumps(record): sort_score})
+                price_str = str(p)
+                vol_float = float(q)
 
-            pipe.zremrangebyrank(bid_key, 0, -51)
+                if vol_float > 0:
+                    record = {"t": readable_time_str, "p": float(p), "a": vol_float}
+                    pipe.zadd(bid_z_key, {price_str: float(p)})
+                    pipe.hset(bid_h_key, price_str, json.dumps(record))
+                else:
+                    pipe.zrem(bid_z_key, price_str)
+                    pipe.hdel(bid_h_key, price_str)
             
-            if time.time() - last_exec_time >= SPEED:
-                pipe.execute()
-                last_exec_time = time.time()
+            # Update trước
+            pipe.execute()
+
+            # BƯỚC 2 & 3: SORT & TRIM
+            # Bids trong Redis xếp: [Thấp nhất (0) ... Cao nhất (-1)]
+            # Giá tốt nhất nằm ở CUỐI. Ta muốn giữ 100 ông cuối.
+            # Xóa từ đầu (0) đến -(100 + 1)
             
-        pipe.execute()
+            # Tìm danh sách thừa (Giá thấp quá mức)
+            excess_bids = r.zrange(bid_z_key, 0, -(ORDERBOOK_DEPTH + 1))
+            
+            if excess_bids:
+                cleanup_pipe.zrem(bid_z_key, *excess_bids)
+                cleanup_pipe.hdel(bid_h_key, *excess_bids)
+
+            # Thực thi lệnh dọn dẹp
+            cleanup_pipe.execute()
+            
         r.close()
 
     batch_df.foreachPartition(process_partition)
@@ -128,7 +170,6 @@ def write_kline_to_redis(batch_df):
     Ghi dữ liệu Nến.
     """
     def process_partition(iterator):
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         last_exec_time = time.time()
         
@@ -165,7 +206,6 @@ def write_ticker_to_redis(batch_df):
     Key: ticker:{symbol}
     """
     def process_partition(iterator):
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         last_exec_time = time.time()
         
