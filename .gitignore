@@ -1,4 +1,5 @@
 /checkpoints/   
+/web/node_modules/
 *.pyc
 __pycache__/    
 /web/node_modules/
