@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import '../styles/OrderBook.css';
+import '../styles/Orderbook.css';
 import { MoreHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
 import { api } from '../api/client';
 
