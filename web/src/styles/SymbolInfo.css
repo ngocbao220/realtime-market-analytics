@@ -112,3 +112,56 @@
     border-right: none; /* Bỏ đường kẻ khi không còn stats bên cạnh */
   }
 }
+
+/* Container bọc thẻ select và icon mũi tên */
+.symbol-select-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Ẩn giao diện mặc định của thẻ select */
+.symbol-dropdown {
+    appearance: none; /* Ẩn mũi tên mặc định của trình duyệt */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    background-color: transparent;
+    border: none;
+    color: #EAECEF; /* Màu chữ sáng */
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding-right: 20px; /* Chừa chỗ cho icon mũi tên custom */
+    outline: none;
+    font-family: inherit;
+}
+
+/* Style cho các option bên trong dropdown */
+.symbol-dropdown option {
+    background-color: #1E2329; /* Màu nền tối của dropdown menu */
+    color: #EAECEF;
+    padding: 10px;
+}
+
+/* Icon mũi tên custom */
+.dropdown-arrow {
+    position: absolute;
+    right: 0;
+    pointer-events: none; /* Để click xuyên qua icon vào thẻ select */
+    color: #848E9C;
+}
+
+.symbol-select-wrapper:hover .symbol-dropdown,
+.symbol-select-wrapper:hover .dropdown-arrow {
+    color: #FCD535; /* Màu vàng Binance khi hover */
+}
+
+.loading-state {
+    color: #848E9C;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+}

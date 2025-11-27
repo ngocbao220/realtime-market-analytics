@@ -1,15 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/OrderBook.css';
 import { MoreHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
-import { api } from '../api/client'; // Import API client
+import { api } from '../api/client';
 
 const OrderBook = ({ symbol = "BTCUSDT" }) => {
   const [bids, setBids] = useState([]);
   const [asks, setAsks] = useState([]);
   const [tickerPrice, setTickerPrice] = useState(0);
+  const [priceChange, setPriceChange] = useState(0);
   const [priceTrend, setPriceTrend] = useState('equal');
 
-  const wsRef = useRef(null);
+  const orderbookWsRef = useRef(null);
+  const tickerWsRef = useRef(null);
   const lastPriceRef = useRef(0);
 
   // --- HÀM XỬ LÝ DATA ---
@@ -36,13 +38,13 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
     }));
   };
 
+  // --- WEBSOCKET CHO ORDERBOOK ---
   useEffect(() => {
-    // Cập nhật dùng api.getWebSocketUrl
     const endpoint = `/market/ws/orderbook/${symbol}?type=real&side=both`;
     const socketUrl = api.getWebSocketUrl(endpoint);
     
     const ws = new WebSocket(socketUrl);
-    wsRef.current = ws;
+    orderbookWsRef.current = ws;
 
     ws.onopen = () => {
         console.log(`✅ Connected to Orderbook WS: ${symbol}`);
@@ -53,39 +55,76 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
             const data = JSON.parse(event.data);
             
             if (data) {
-                const newAsks = processOrderBookData(data.asks || []).reverse();
-                const newBids = processOrderBookData(data.bids || []);
+                const newAsks = processOrderBookData(data.asks || []).slice(0, 15).reverse();
+                const newBids = processOrderBookData(data.bids || []).slice(0, 15);
 
+                
                 setAsks(newAsks);
                 setBids(newBids);
-
-                if (newAsks.length > 0 && newBids.length > 0) {
-                    const bestAsk = newAsks[newAsks.length - 1].price;
-                    const bestBid = newBids[0].price;                  
-                    
-                    const estimatedPrice = (bestAsk + bestBid) / 2;
-                    
-                    const oldPrice = lastPriceRef.current;
-                    if (oldPrice > 0) {
-                        if (estimatedPrice > oldPrice) setPriceTrend('up');
-                        else if (estimatedPrice < oldPrice) setPriceTrend('down');
-                    }
-                    
-                    lastPriceRef.current = estimatedPrice;
-                    setTickerPrice(estimatedPrice);
-                }
             }
         } catch (err) {
-            console.error("Error parsing WS message:", err);
+            console.error("Error parsing Orderbook WS message:", err);
         }
     };
 
     ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
+        console.error("Orderbook WebSocket Error:", error);
     };
 
     return () => {
-        if (wsRef.current) wsRef.current.close();
+        if (orderbookWsRef.current) orderbookWsRef.current.close();
+    };
+  }, [symbol]);
+
+  // --- WEBSOCKET CHO TICKER (GIÁ THẬT) ---
+  useEffect(() => {
+    const socketUrl = api.getWebSocketUrl('/ws/tickers');
+    
+    console.log("Connecting Ticker WS to:", socketUrl);
+    
+    const ws = new WebSocket(socketUrl);
+    tickerWsRef.current = ws;
+
+    ws.onopen = () => {
+        console.log("✅ Connected to Ticker WebSocket");
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            
+            if (Array.isArray(data)) {
+                // Tìm ticker của symbol hiện tại
+                const currentTicker = data.find(ticker => ticker.symbol === symbol);
+                
+                if (currentTicker) {
+                    const newPrice = parseFloat(currentTicker.price);
+                    const change = parseFloat(currentTicker.change || 0);
+                    
+                    // Xác định trend dựa vào giá cũ
+                    const oldPrice = lastPriceRef.current;
+                    if (oldPrice > 0) {
+                        if (newPrice > oldPrice) setPriceTrend('up');
+                        else if (newPrice < oldPrice) setPriceTrend('down');
+                        else setPriceTrend('equal');
+                    }
+                    
+                    lastPriceRef.current = newPrice;
+                    setTickerPrice(newPrice);
+                    setPriceChange(change);
+                }
+            }
+        } catch (err) {
+            console.error("Error parsing Ticker WS message:", err);
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error("Ticker WebSocket Error:", error);
+    };
+
+    return () => {
+        if (tickerWsRef.current) tickerWsRef.current.close();
     };
   }, [symbol]);
 
@@ -107,6 +146,7 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
   };
 
   const trendColor = priceTrend === 'down' ? 'text-red' : 'text-green';
+  const isPositiveChange = priceChange >= 0;
 
   return (
     <div className="orderbook-container">
@@ -152,6 +192,10 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
          )}
          
          <span className="ticker-mark">${formatPrice(tickerPrice)}</span>
+         
+         <span className={`ticker-change ${isPositiveChange ? 'text-green' : 'text-red'}`}>
+            {isPositiveChange ? '+' : ''}{priceChange.toFixed(2)}%
+         </span>
       </div>
 
       <div className="ob-list flex-1">

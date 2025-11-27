@@ -24,7 +24,7 @@ const Header = () => {
       try {
         const data = JSON.parse(event.data);
         if (Array.isArray(data)) {
-           setTickers(data.slice(0, 4));
+           setTickers(data);
         }
       } catch (err) {
         console.error("Lỗi parse data ticker:", err);

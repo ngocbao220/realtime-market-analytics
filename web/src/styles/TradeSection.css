@@ -1,0 +1,206 @@
+/* src/styles/TradeSection.css */
+
+/* --- CONTAINER CHUNG --- */
+.trade-section-container {
+  background-color: #161a1e;
+  color: #EAECEF;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- FORM ĐẶT LỆNH (SPOT TRADING) --- */
+.trade-form-wrapper {
+  padding: 16px;
+  border-bottom: 1px solid #2B3139;
+}
+
+.trade-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #848E9C;
+}
+
+.trade-tab {
+  cursor: pointer;
+  padding-bottom: 4px;
+}
+
+.trade-tab.active {
+  color: #F0B90B;
+  border-bottom: 2px solid #F0B90B;
+}
+
+.order-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #848E9C;
+}
+
+.type-option {
+  cursor: pointer;
+}
+.type-option:hover { color: #EAECEF; }
+.type-option.active { color: #F0B90B; }
+
+/* Hai cột Mua / Bán */
+.forms-container {
+  display: flex;
+  gap: 16px;
+}
+
+.side-form {
+  flex: 1;
+}
+
+/* Input Group */
+.input-group {
+  background-color: #2B3139;
+  border-radius: 4px;
+  padding: 0 12px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.input-group:focus-within {
+  border-color: #F0B90B;
+}
+
+.input-label {
+  color: #848E9C;
+  font-size: 12px;
+}
+
+.trade-input {
+  background: transparent;
+  border: none;
+  color: #EAECEF;
+  text-align: right;
+  flex: 1;
+  margin: 0 8px;
+  outline: none;
+  font-weight: 500;
+}
+
+.input-suffix {
+  color: #EAECEF;
+  font-size: 12px;
+}
+
+/* Slider (Thanh trượt % vốn) */
+.slider-container {
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.slider-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -6px;
+}
+
+.mark-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #474D57;
+  border-radius: 50%;
+  border: 2px solid #161a1e;
+  cursor: pointer;
+}
+.mark-dot.active { background-color: #EAECEF; }
+
+/* Nút Action */
+.action-btn {
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.action-btn:hover { opacity: 0.9; }
+.btn-buy { background-color: #0ECB81; color: white; }
+.btn-sell { background-color: #F6465D; color: white; }
+.btn-login { background-color: #2B3139; color: #848E9C; } /* Trạng thái chưa đăng nhập */
+
+/* --- USER HISTORY TABS (PHẦN DƯỚI) --- */
+.user-history-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Cắt phần thừa */
+}
+
+.history-tabs {
+  display: flex;
+  gap: 24px;
+  padding: 0 16px;
+  height: 40px;
+  align-items: center;
+  border-bottom: 1px solid #2B3139;
+  background-color: #161a1e;
+}
+
+.h-tab {
+  font-size: 13px;
+  font-weight: 600;
+  color: #848E9C;
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.h-tab:hover { color: #EAECEF; }
+.h-tab.active { color: #F0B90B; }
+.h-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #F0B90B;
+}
+
+/* Nội dung bảng lịch sử */
+.history-content {
+  flex: 1;
+  overflow-y: auto; /* Cho phép cuộn dọc */
+  padding: 0;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #474D57;
+  font-size: 13px;
+  margin-top: 40px;
+}
+
+/* Login Link */
+.login-link {
+  color: #F0B90B;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.login-link:hover { text-decoration: underline; }
