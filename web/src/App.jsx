@@ -34,69 +34,56 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* 1. MẶC ĐỊNH VÀO LOGIN (Khi truy cập trang chủ /) */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        
-        {/* Trang Login */}
-        <Route path="/login" element={<Login />} />
-      {/* Đặt Provider ở đây để bao bọc toàn bộ App hoặc chỉ bao bọc Dashboard */}
-      <TickerProvider> 
+      <TickerProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
+          {/* MẶC ĐỊNH VÀO LOGIN */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* Trang Login */}
           <Route path="/login" element={<Login />} />
 
+          {/* Dashboard User */}
           <Route 
-            path="/dashboard" 
+            path="/dashboard"
             element={
               <PrivateRoute>
                 <User_Dashboard onLogout={handleLogout} />
               </PrivateRoute>
-            } 
+            }
           />
 
-        {/* Route cho Admin (Dashboard chính) */}
-        <Route 
-          path="/admin" 
-          element={
-            <AdminRoute>
-              <Admin_Dashboard />
-            </AdminRoute>
-          } 
-        />
-
-        {/* Route Quản lý User (Chỉ Admin) */}
-        <Route 
-          path="/manage-users" 
-          element={
-            <AdminRoute>
-               <Manage_user />
-            </AdminRoute>
-          } 
-        />
-        {/* Route Lịch sử Giao dịch (Admin) */}
-        <Route 
-          path="/history-trades" 
-          element={
-            <AdminRoute>
-               <HistoryTrades />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Đường dẫn sai bất kỳ (404) -> Quay về Login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-          <Route 
-            path="/admin" 
+          {/* Admin Dashboard */}
+          <Route
+            path="/admin"
             element={
               <AdminRoute>
                 <Admin_Dashboard />
               </AdminRoute>
-            } 
+            }
           />
-          
-          <Route path="*" element={<Navigate to="/login" />} />
+
+          {/* Manage Users */}
+          <Route
+            path="/manage-users"
+            element={
+              <AdminRoute>
+                <Manage_user />
+              </AdminRoute>
+            }
+          />
+
+          {/* History Trades */}
+          <Route
+            path="/history-trades"
+            element={
+              <AdminRoute>
+                <HistoryTrades />
+              </AdminRoute>
+            }
+          />
+
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </TickerProvider>
     </BrowserRouter>
