@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // --- CẤU HÌNH ---
 // Trong Vite dùng import.meta.env, trong Create-React-App dùng process.env
-const API_BASE_URL = import.meta.env?.API_URL || "http://localhost:8000";
+const API_BASE_URL = "http://localhost:8000" || import.meta.env.VITE_API_URL;
 
 class ExchangeAPI {
     /**
@@ -62,6 +62,14 @@ class ExchangeAPI {
             }
             return null;
         }
+    }
+
+    getWebSocketUrl(endpoint) {
+        // Tự động đổi http -> ws, https -> wss
+        const wsBase = this.baseURL.replace(/^http/, 'ws');
+        // Xử lý dấu / để tránh bị // (ví dụ: ws://host//ws/tickers)
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        return `${wsBase}${cleanEndpoint}`;
     }
 
     // ==========================================

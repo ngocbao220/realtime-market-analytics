@@ -1,23 +1,25 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/SymbolInfo.css';
 import { Star } from 'lucide-react';
+import { api } from '../api/client'; // Import API client
 
 const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
   const [ticker, setTicker] = useState(null);
   
-  // 1. Thêm State riêng để lưu màu của giá (Tick Color)
+  // State lưu màu của giá (Tick Color)
   const [priceColor, setPriceColor] = useState('text-green');
   
-  // 2. Dùng Ref để lưu giá trị của lần cập nhật TRƯỚC ĐÓ
+  // Dùng Ref để lưu giá trị của lần cập nhật TRƯỚC ĐÓ
   const prevPriceRef = useRef(0); 
   const wsRef = useRef(null);
 
   useEffect(() => {
-    const WS_URL = "ws://localhost:8000/ws/tickers";
-    const ws = new WebSocket(WS_URL);
+    // Cập nhật dùng api.getWebSocketUrl
+    const socketUrl = api.getWebSocketUrl('/ws/tickers');
+    const ws = new WebSocket(socketUrl);
     wsRef.current = ws;
 
-    ws.onopen = () => console.log("Connected to Tickers WS");
+    ws.onopen = () => console.log("✅ Connected to Tickers WS (SymbolInfo)");
 
     ws.onmessage = (event) => {
         try {
@@ -29,11 +31,8 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
                     const newPrice = parseFloat(foundCoin.price);
                     const oldPrice = prevPriceRef.current;
 
-                    // --- LOGIC TICK-BY-TICK (Cái bạn cần) ---
-                    // Nếu giá mới cao hơn giá cũ -> Xanh
-                    // Nếu giá mới thấp hơn giá cũ -> Đỏ
-                    // Nếu bằng nhau -> Giữ nguyên màu cũ (không đổi)
-                    if (oldPrice > 0) { // Bỏ qua lần đầu tiên (oldPrice = 0)
+                    // Logic tick-by-tick
+                    if (oldPrice > 0) { 
                         if (newPrice > oldPrice) {
                             setPriceColor('text-green');
                         } else if (newPrice < oldPrice) {
@@ -41,10 +40,7 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
                         }
                     }
 
-                    // Cập nhật giá cũ thành giá hiện tại cho lần sau so sánh
                     prevPriceRef.current = newPrice;
-                    
-                    // Cập nhật data vào state để render
                     setTicker(foundCoin);
                 }
             }
@@ -55,7 +51,6 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
 
     return () => {
         if (wsRef.current) wsRef.current.close();
-        // Reset giá cũ khi đổi coin khác để tránh so sánh khập khiễng
         prevPriceRef.current = 0; 
     };
   }, [activeSymbol]);
@@ -75,13 +70,10 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
   const lowPrice = parseFloat(ticker.low);
   const percentChange = parseFloat(ticker.change);
   
-  // 24h Change (Vẫn giữ logic 24h cho phần thống kê bên phải)
   const priceChangeAmount = currentPrice - openPrice;
-  // Màu của phần trăm thay đổi 24h thì vẫn nên theo trend ngày (Positive/Negative)
   const statsColorClass = percentChange >= 0 ? 'text-green' : 'text-red';
   const sign = percentChange >= 0 ? '+' : '';
 
-  // Formatters
   const formatPrice = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   const formatVol = (num) => {
       if (num >= 1000000000) return (num / 1000000000).toFixed(2) + 'B';
@@ -93,13 +85,11 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
   const baseAsset = activeSymbol.replace("USDT", "");
   const iconUrl = `https://cryptologos.cc/logos/${baseAsset.toLowerCase()}-${baseAsset.toLowerCase()}-logo.png?v=029`;
 
-  // Tính Volume USDT
   const volBase = parseFloat(ticker.volume);
   const volQuote = volBase * currentPrice;
 
   return (
     <div className="symbol-info-container">
-      {/* 1. Identity */}
       <div className="info-group identity">
         <div className="star-icon"><Star size={16} /></div>
         <img 
@@ -114,7 +104,6 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
         </div>
       </div>
 
-      {/* 2. Giá Lớn - Dùng priceColor (Realtime Tick) */}
       <div className="info-group price-group">
         <span className={`current-price ${priceColor}`}>
             {formatPrice(currentPrice)}
@@ -122,7 +111,6 @@ const SymbolInfo = ({ activeSymbol = "BTCUSDT" }) => {
         <span className="fiat-price">${formatPrice(currentPrice)}</span>
       </div>
 
-      {/* 3. Stats Grid - Dùng statsColorClass (Trend 24h) */}
       <div className="info-group stats-grid">
         <div className="stat-item">
           <span className="stat-label">Biến động 24h</span>

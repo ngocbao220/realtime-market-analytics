@@ -1,49 +1,82 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Bot, User } from 'lucide-react'; 
-import { api } from '../api/client'; 
-// Import file CSS vừa tạo
+import { api } from '../api/client'; // 1. Import api instance
 import '../styles/Header.css'; 
 
 const Header = () => {
   const [tickers, setTickers] = useState([]);
+  const ws = useRef(null);
 
   useEffect(() => {
-    const fetchTickers = async () => {
+    // 2. Sử dụng hàm helper để lấy URL động (Tự động đổi ws://localhost hoặc ws://domain.com)
+    const socketUrl = api.getWebSocketUrl('/ws/tickers');
+    
+    // Debug để bạn yên tâm là nó đang kết nối đúng đâu
+    console.log("Connecting Ticker WS to:", socketUrl); 
+
+    ws.current = new WebSocket(socketUrl);
+
+    ws.current.onopen = () => {
+      console.log("✅ Connected to Ticker WebSocket");
+    };
+
+    ws.current.onmessage = (event) => {
       try {
-        const data = await api.getTickers(); 
+        const data = JSON.parse(event.data);
         if (Array.isArray(data)) {
            setTickers(data.slice(0, 4));
         }
-      } catch (e) { console.log("Chưa kết nối API"); }
+      } catch (err) {
+        console.error("Lỗi parse data ticker:", err);
+      }
     };
-    fetchTickers();
+
+    ws.current.onerror = (error) => {
+      console.error("WebSocket Error:", error);
+    };
+
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
   }, []);
 
   return (
     <header className="header-container">
-      {/* Logo & Nav Wrapper */}
       <div className="left-section">
         <div className="brand-logo">BINANCE</div>
         
-        {/* Menu Desktop */}
         <nav className="nav-menu">
           <a href="#" className="nav-link">Markets</a>
           <a href="#" className="nav-link">Trade</a>
         </nav>
 
-        {/* Ticker chạy giá */}
         <div className="ticker-section">
-          {tickers.map((coin) => (
-             <div key={coin.symbol} className="ticker-item">
-                <span className="ticker-symbol">{coin.symbol}</span>
-                <span className="ticker-price">{coin.price}</span>
-             </div>
-          ))}
-          {tickers.length === 0 && <span className="ticker-loading">Loading Tickers...</span>}
+          {tickers.map((coin) => {
+             const change = parseFloat(coin.change || 0);
+             const isPositive = change >= 0;
+             const colorClass = isPositive ? 'text-green' : 'text-red';
+             
+             return (
+               <div key={coin.symbol} className="ticker-item">
+                  <span className="ticker-symbol">{coin.symbol}</span>
+                  <div className="flex gap-2">
+                      <span className="ticker-price">{coin.price}</span>
+                      <span className={`text-xs ${colorClass}`}>
+                        {isPositive ? '+' : ''}{change}%
+                      </span>
+                  </div>
+               </div>
+             );
+          })}
+          
+          {tickers.length === 0 && (
+            <span className="ticker-loading">Connecting WS...</span>
+          )}
         </div>
       </div>
 
-      {/* Nút AI & User */}
       <div className="right-section">
         <button className="ai-btn">
           <Bot size={18} />

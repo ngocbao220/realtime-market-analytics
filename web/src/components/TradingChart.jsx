@@ -8,18 +8,16 @@ import {
     HistogramSeries,
     LineSeries 
 } from 'lightweight-charts';
+import { api } from '../api/client'; // Import API client
 import '../styles/TradingChart.css';
 
 const TradingChart = ({ symbol = "BTCUSDT" }) => {
-  // Ref cho 2 container riêng biệt
   const priceChartContainerRef = useRef(null);
   const volumeChartContainerRef = useRef(null);
   
-  // Refs giữ instance chart
   const priceChartRef = useRef(null);
   const volumeChartRef = useRef(null);
 
-  // Refs Series
   const candleSeriesRef = useRef(null);
   const lineSeriesRef = useRef(null); 
   const volumeSeriesRef = useRef(null);
@@ -28,12 +26,10 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
   
   const wsRef = useRef(null);
 
-  // State
   const [interval, setIntervalState] = useState('1m'); 
   const [chartType, setChartType] = useState('candle'); 
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hàm tính MA
   const calculateSMA = (data, count) => {
     const avg = data.map((d, i) => {
         if (i < count - 1) return { time: d.time }; 
@@ -44,11 +40,9 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     return avg.filter(d => d.value !== undefined);
   };
 
-  // --- INIT CHARTS ---
   useEffect(() => {
     if (!priceChartContainerRef.current || !volumeChartContainerRef.current) return;
 
-    // --- CẤU HÌNH CHUNG ---
     const chartOptions = {
         layout: {
             background: { type: ColorType.Solid, color: '#161a1e' },
@@ -60,16 +54,11 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
             vertLines: { color: '#2B3139', style: 1, visible: false },
             horzLines: { color: '#2B3139', style: 1, visible: true },
         },
-        
-        // --- FIX LỖI THẲNG HÀNG TẠI ĐÂY ---
         rightPriceScale: {
             borderColor: '#2B3139',
             visible: true,
-            // Ép độ rộng trục phải cố định là 70px cho cả 2 biểu đồ
             minimumWidth: 70, 
         },
-        // ------------------------------------
-
         timeScale: {
             timeVisible: true,
             secondsVisible: false,
@@ -85,7 +74,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
                 return new Intl.DateTimeFormat('en-GB', { ...options, hour: '2-digit', minute: '2-digit' }).format(date);
             },
         },
-        // ... (Giữ nguyên localization và crosshair)
         localization: {
             locale: 'en-GB',
             timeFormatter: (timestamp) => {
@@ -109,28 +97,23 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
         },
     };
 
-    // 1. TẠO PRICE CHART (KHUNG TRÊN)
     const priceChart = createChart(priceChartContainerRef.current, {
         ...chartOptions,
         width: priceChartContainerRef.current.clientWidth,
         height: priceChartContainerRef.current.clientHeight,
         timeScale: {
             ...chartOptions.timeScale,
-            visible: false, // Ẩn trục thời gian của chart trên để đỡ bị lặp
+            visible: false, 
         }
     });
 
-    // 2. TẠO VOLUME CHART (KHUNG DƯỚI)
     const volumeChart = createChart(volumeChartContainerRef.current, {
         ...chartOptions,
         width: volumeChartContainerRef.current.clientWidth,
         height: volumeChartContainerRef.current.clientHeight,
-        grid: { ...chartOptions.grid, horzLines: { visible: false } } // Ẩn lưới ngang volume cho thoáng
+        grid: { ...chartOptions.grid, horzLines: { visible: false } } 
     });
 
-    // --- SETUP SERIES ---
-
-    // A. Series cho Price Chart
     const candleSeries = priceChart.addSeries(CandlestickSeries, {
         upColor: '#0ECB81', downColor: '#F6465D',
         borderVisible: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
@@ -142,13 +125,11 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     const ma7 = priceChart.addSeries(LineSeries, { color: '#F0B90B', lineWidth: 2, crosshairMarkerVisible: false });
     const ma25 = priceChart.addSeries(LineSeries, { color: '#E056FD', lineWidth: 2, crosshairMarkerVisible: false });
 
-    // B. Series cho Volume Chart
     const volumeSeries = volumeChart.addSeries(HistogramSeries, {
         color: '#26a69a',
         priceFormat: { type: 'volume' },
     });
 
-    // Lưu Refs
     priceChartRef.current = priceChart;
     volumeChartRef.current = volumeChart;
     candleSeriesRef.current = candleSeries;
@@ -157,8 +138,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     ma25SeriesRef.current = ma25;
     volumeSeriesRef.current = volumeSeries;
 
-    // --- ĐỒNG BỘ HÓA (SYNC) 2 BIỂU ĐỒ ---
-    // Khi cuộn chart này, chart kia cuộn theo
     const syncCharts = (source, target) => {
         source.timeScale().subscribeVisibleLogicalRangeChange((range) => {
             if (range) {
@@ -170,7 +149,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     syncCharts(priceChart, volumeChart);
     syncCharts(volumeChart, priceChart);
 
-    // --- RESIZE HANDLER ---
     const handleResize = () => {
         if (priceChartContainerRef.current && volumeChartContainerRef.current) {
             priceChart.applyOptions({ 
@@ -192,7 +170,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     };
   }, [interval]);
 
-  // --- SWITCH TYPE ---
   useEffect(() => {
     if (!candleSeriesRef.current || !lineSeriesRef.current) return;
     const isCandle = chartType === 'candle'; 
@@ -202,14 +179,16 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     if(ma25SeriesRef.current) ma25SeriesRef.current.applyOptions({ visible: isCandle });
   }, [chartType]);
 
-  // --- WEBSOCKET DATA ---
   useEffect(() => {
     setIsLoading(true);
-    const WS_URL = `ws://localhost:8000/ws/klines/${symbol}?interval=${interval}&limit=500`;
-    const ws = new WebSocket(WS_URL);
+    // Cập nhật dùng api.getWebSocketUrl
+    const endpoint = `/ws/klines/${symbol}?interval=${interval}&limit=500`;
+    const socketUrl = api.getWebSocketUrl(endpoint);
+    
+    const ws = new WebSocket(socketUrl);
     wsRef.current = ws;
 
-    ws.onopen = () => console.log(`Connected to Klines WS: ${interval}`);
+    ws.onopen = () => console.log(`✅ Connected to Klines WS: ${interval}`);
 
     ws.onmessage = (event) => {
         try {
@@ -235,7 +214,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
                     };
                 }).sort((a, b) => a.time - b.time); 
                 
-                // Update Price Chart
                 if (candleSeriesRef.current) candleSeriesRef.current.setData(candleData);
                 if (lineSeriesRef.current) lineSeriesRef.current.setData(candleData.map(d => ({ time: d.time, value: d.close })));
                 if (chartType === 'candle') {
@@ -243,7 +221,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
                     if (ma25SeriesRef.current) ma25SeriesRef.current.setData(calculateSMA(candleData, 25));
                 }
 
-                // Update Volume Chart (Riêng biệt)
                 if (volumeSeriesRef.current) {
                     volumeSeriesRef.current.setData(candleData.map(d => ({
                         time: d.time,
@@ -283,11 +260,9 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
         </div>
       </div>
 
-      {/* CONTAINER CHIA ĐÔI */}
       <div className="charts-split-container">
           {isLoading && <div className="chart-loading"><span className="animate-pulse">Loading Chart...</span></div>}
           
-          {/* Biểu đồ trên: GIÁ */}
           <div className="price-chart-container" ref={priceChartContainerRef}>
              {!isLoading && chartType === 'candle' && (
                  <div className="absolute top-2 left-2 text-[10px] z-10 font-mono pointer-events-none">
@@ -297,7 +272,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
              )}
           </div>
 
-          {/* Biểu đồ dưới: VOLUME */}
           <div className="volume-chart-container" ref={volumeChartContainerRef}></div>
       </div>
     </div>
