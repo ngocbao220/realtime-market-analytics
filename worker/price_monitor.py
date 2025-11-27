@@ -8,11 +8,12 @@ import os
 # --- CONFIG ---
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 API_URL = os.getenv("API_URL", "http://34.124.203.62:8000")
-CHECK_INTERVAL = 60 # Kiểm tra giá mỗi 60s
+CHECK_INTERVAL = 60  # Kiểm tra giá mỗi 60s
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("PriceMonitor")
 
+# Kết nối Redis
 try:
     r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 except Exception as e:
@@ -21,28 +22,30 @@ except Exception as e:
 def monitor_loop():
     logger.info("🚀 Starting Price Monitor (Top 5 Coins Strategy)...")
     
-    # [CẬP NHẬT] Danh sách 5 đồng Coin cố định
+    # Danh sách 5 đồng Coin cố định
     watchlist = ["BTC", "ETH", "BNB", "SOL", "DOGE"]
     
-    # Lưu thời điểm phân tích lần cuối
+    # Lưu thời điểm phân tích lần cuối { "BTC": 17000000.0, ... }
     last_analysis_time = {}
 
     while True:
         for symbol in watchlist:
             try:
-                # 1. Lấy dữ liệu giá từ Redis (Do Producer đẩy vào)
+                # 1. Lấy dữ liệu giá từ Redis
                 ticker_key = f"ticker_1d:{symbol}USDT"
                 ticker_data = r.get(ticker_key)
                 
                 if not ticker_data: 
-                    # logger.warning(f"No data for {symbol}, skipping...")
+                    # Nếu chưa có dữ liệu trong Redis thì bỏ qua
                     continue
 
                 data = json.loads(ticker_data)
                 current_price = float(data.get('Close_price', 0))
                 open_price = float(data.get('Open_price', 0))
 
-                if open_price == 0: continue
+                # Tránh chia cho 0
+                if open_price == 0: 
+                    continue
 
                 # 2. Tính % biến động trong 24h
                 change_percent = ((current_price - open_price) / open_price) * 100
@@ -53,7 +56,8 @@ def monitor_loop():
                 should_analyze = False
                 trigger_reason = ""
 
-                # [LOGIC MỚI] 
+                # [LOGIC QUYẾT ĐỊNH CÓ GỌI AI HAY KHÔNG] 
+                
                 # TH1: Chưa phân tích bao giờ (Lần chạy đầu tiên) -> Chạy ngay
                 if last_time == 0:
                     should_analyze = True
@@ -66,7 +70,7 @@ def monitor_loop():
                         trend = "PUMP 🟢" if change_percent > 0 else "DUMP 🔴"
                         trigger_reason = f"🚨 ALERT {trend} (>3%)"
                 
-                # TH3: Thị trường bình thường -> Cập nhật mỗi 30 phút (1800s) để giữ data luôn mới
+                # TH3: Thị trường bình thường -> Cập nhật mỗi 30 phút (1800s)
                 else:
                     if current_time - last_time > 1800: 
                         should_analyze = True
@@ -83,15 +87,15 @@ def monitor_loop():
                     }
                     
                     try:
-                        # Gọi vào API nội bộ để phân tích và lưu vào Redis
+                        # Gọi vào API nội bộ
                         response = requests.post(f"{API_URL}/narrative/analyze", json=payload, timeout=60)
                         
                         if response.status_code == 200:
-                            analysis = response.json()
+                            # Chỉ cập nhật thời gian nếu gọi thành công
                             logger.info(f"✅ AI Done: {symbol}")
                             last_analysis_time[symbol] = current_time
                             
-                            # Nghỉ 5s để tránh spam API
+                            # Nghỉ 5s để Gemini hồi phục quota, tránh lỗi rate limit
                             time.sleep(5) 
                         else:
                             logger.error(f"API Error ({response.status_code}): {response.text}")
@@ -102,7 +106,7 @@ def monitor_loop():
             except Exception as e:
                 logger.error(f"Error checking {symbol}: {e}")
         
-        # Đợi 60s trước khi quét lại vòng mới
+        # Đợi 60s trước khi quét lại toàn bộ danh sách
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
