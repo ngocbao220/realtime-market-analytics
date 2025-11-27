@@ -5,14 +5,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px; /* Giảm padding một chút trên mobile */
+  padding: 0 16px;
   height: 64px;
   background-color: #161a1e;
   border-bottom: 1px solid #2B3139;
   font-family: sans-serif;
   color: #EAECEF;
   /* Ngăn thanh cuộn ngang của cả trang */
-  overflow: visible; /* [SỬA QUAN TRỌNG]: Đổi hidden -> visible để Popup AI không bị cắt cụt */
+  overflow: visible; 
   position: relative; 
   z-index: 50;
 }
@@ -22,9 +22,9 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  flex: 1; /* Chiếm toàn bộ không gian còn dư */
-  min-width: 0; /* Quan trọng: Cho phép flex container co lại nhỏ hơn nội dung */
-  margin-right: 16px; /* Tạo khoảng cách với nút User bên phải */
+  flex: 1;
+  min-width: 0;
+  margin-right: 16px;
 }
 
 .brand-logo {
@@ -32,8 +32,8 @@
   font-weight: 700;
   font-size: 1.5rem;
   cursor: pointer;
-  white-space: nowrap; /* Logo không bị xuống dòng */
-  flex-shrink: 0; /* Logo không bao giờ bị co nhỏ */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* --- Menu Desktop --- */
@@ -44,7 +44,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: #848E9C;
-  flex-shrink: 0; /* Menu không bị co nhỏ nếu hiện */
+  flex-shrink: 0;
 }
 
 .nav-link {
@@ -60,25 +60,18 @@
 
 /* --- Ticker (Giá chạy) --- */
 .ticker-section {
-  display: flex; /* Luôn hiển thị (thay vì ẩn) */
+  display: flex;
   align-items: center;
   gap: 24px;
-  
-  /* Logic co giãn quan trọng */
-  flex: 1;          /* Tự động mở rộng */
-  overflow-x: auto; /* Nếu hẹp quá thì cho phép cuộn ngang */
-  
-  /* Ẩn thanh cuộn (Scrollbar) để đẹp hơn */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-  
-  /* Style đường kẻ dọc */
+  flex: 1;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   border-left: 1px solid #2B3139;
   padding-left: 24px;
   margin-left: 8px;
 }
 
-/* Ẩn thanh cuộn trên Chrome/Safari/Opera */
 .ticker-section::-webkit-scrollbar {
   display: none;
 }
@@ -87,7 +80,7 @@
   display: flex;
   flex-direction: column;
   font-size: 0.75rem;
-  white-space: nowrap; /* Giá không bị xuống dòng */
+  white-space: nowrap;
 }
 
 .ticker-symbol {
@@ -104,10 +97,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0; /* Không bao giờ bị co lại hay biến mất */
+  flex-shrink: 0;
 }
 
-/* --- AI Helper Button (Giữ nguyên của bạn) --- */
+/* --- AI Helper Button --- */
 .ai-btn {
   display: flex;
   align-items: center;
@@ -133,7 +126,7 @@
     transform: translateY(1px);
 }
 
-/* Ẩn chữ "AI Helper" trên mobile để tiết kiệm chỗ */
+/* Ẩn chữ "AI Helper" trên mobile */
 .ai-btn span {
   display: none; 
 }
@@ -151,16 +144,14 @@
   flex-shrink: 0;
 }
 
-/* --- Media Queries (Xử lý Responsive) --- */
-
-/* Màn hình Tablet trở lên (lớn hơn 768px) */
+/* --- Media Queries --- */
 @media (min-width: 768px) {
   .header-container {
     padding: 0 24px;
   }
   
   .ai-btn span {
-    display: inline; /* Hiện lại chữ AI Helper */
+    display: inline;
   }
 
   .ai-btn {
@@ -169,57 +160,45 @@
   }
 }
 
-/* Màn hình Desktop (lớn hơn 1024px) */
 @media (min-width: 1024px) {
   .nav-menu {
-    display: flex; /* Hiện menu Markets/Trade */
+    display: flex;
   }
 }
 
-.text-green {
-  color: #0ECB81; /* Màu xanh Binance */
-}
-
-.text-red {
-  color: #F6465D; /* Màu đỏ Binance */
-}
-
-.ticker-change {
-  font-size: 0.7rem;
-  margin-top: 2px;
-}
+.text-green { color: #0ECB81; }
+.text-red { color: #F6465D; }
+.ticker-change { font-size: 0.7rem; margin-top: 2px; }
 
 /* ==========================================================================
-   PHẦN THÊM MỚI: AI HELPER POPUP (Để không bị đẩy layout)
+   AI HELPER POPUP (Giao diện Menu & Options)
    ========================================================================== */
 
-/* Wrapper để giữ vị trí tương đối cho popup nổi lên */
 .ai-wrapper {
     position: relative;
 }
 
-/* Khung Popup chính */
+/* Popup Container */
 .ai-popup {
     position: absolute;
-    top: 50px; /* Đẩy xuống dưới nút một chút */
-    right: -10px; /* Căn lề phải */
-    width: 380px; /* Chiều rộng bảng tin */
+    top: 50px;
+    right: -10px;
+    width: 380px;
     background-color: #1E2329;
     border: 1px solid #2B3139;
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5); /* Đổ bóng đậm để nổi bật */
-    z-index: 1000; /* Luôn nổi lên trên cùng */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    z-index: 1000;
     overflow: hidden;
     animation: slideDown 0.2s ease-out;
 }
 
-/* Hiệu ứng trượt xuống nhẹ */
 @keyframes slideDown {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Header của Popup */
+/* Header Popup */
 .ai-popup-header {
     display: flex;
     justify-content: space-between;
@@ -229,10 +208,13 @@
     border-bottom: 1px solid #1E2329;
 }
 
-.ai-title {
+.ai-header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+}
+
+.ai-title {
     font-weight: 600;
     font-size: 14px;
     color: #EAECEF;
@@ -240,7 +222,8 @@
 
 .ai-icon-gold { color: #F0B90B; }
 
-.close-btn {
+/* Nút Đóng & Back */
+.close-btn, .back-btn {
     background: none;
     border: none;
     color: #848E9C;
@@ -248,125 +231,115 @@
     padding: 4px;
     display: flex;
     align-items: center;
+    transition: color 0.2s;
 }
-.close-btn:hover { color: #EAECEF; }
+.close-btn:hover, .back-btn:hover { color: #EAECEF; }
 
-/* Body chứa danh sách tin */
+/* Body Popup */
 .ai-popup-body {
     max-height: 450px;
     overflow-y: auto;
-    padding: 8px;
+    padding: 12px; /* Tăng padding để menu thoáng hơn */
     background-color: #1E2329;
 }
 
-/* Thẻ tin tức (Card) */
+/* --- [MỚI] STYLE CHO MENU CHÍNH --- */
+.ai-menu-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ai-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: #2B3139;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    width: 100%;
+    color: inherit;
+}
+
+.ai-menu-item:hover {
+    background-color: #343a40;
+    border-color: #474D57;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: rgba(240, 185, 11, 0.1); /* Màu vàng nhạt */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #F0B90B;
+    flex-shrink: 0;
+}
+
+.menu-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menu-title {
+    color: #EAECEF;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.menu-desc {
+    color: #848E9C;
+    font-size: 12px;
+}
+
+/* Style cho list alert (giữ nguyên) */
 .ai-card {
     background-color: #2B3139;
     border-radius: 6px;
     padding: 12px;
     margin-bottom: 8px;
-    border-left: 3px solid transparent; /* Viền trái ẩn */
+    border-left: 3px solid transparent;
     transition: transform 0.2s;
 }
+.ai-card:hover { transform: translateX(2px); background-color: #343a40; }
 
-.ai-card:hover {
-    transform: translateX(2px);
-    background-color: #343a40;
-}
+.card-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.coin-info { display: flex; align-items: center; gap: 8px; }
+.coin-name { font-weight: 700; color: #EAECEF; font-size: 14px; }
 
-/* Header của thẻ tin */
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-}
-
-.coin-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.coin-name {
-    font-weight: 700;
-    color: #EAECEF;
-    font-size: 14px;
-}
-
-/* Nhãn % Tăng/Giảm */
 .coin-change {
     font-size: 11px;
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 600;
 }
+.coin-change.trend-up { background-color: rgba(14, 203, 129, 0.15); color: #0ECB81; border-left: 3px solid #0ECB81; }
+.coin-change.trend-down { background-color: rgba(246, 70, 93, 0.15); color: #F6465D; border-left: 3px solid #F6465D; }
 
-.coin-change.trend-up {
-    background-color: rgba(14, 203, 129, 0.15);
-    color: #0ECB81;
-    border-left: 3px solid #0ECB81;
-}
+.time-stamp { font-size: 10px; color: #848E9C; }
+.card-content p { font-size: 13px; color: #B7BDC6; line-height: 1.5; margin: 0; text-align: left; }
 
-.coin-change.trend-down {
-    background-color: rgba(246, 70, 93, 0.15);
-    color: #F6465D;
-    border-left: 3px solid #F6465D;
-}
-
-.time-stamp {
-    font-size: 10px;
-    color: #848E9C;
-}
-
-/* Nội dung phân tích AI */
-.card-content p {
-    font-size: 13px;
-    color: #B7BDC6;
-    line-height: 1.5;
-    margin: 0;
-    text-align: left; /* Căn trái văn bản */
-}
-
-/* Footer Popup */
 .ai-popup-footer {
-    text-align: center;
-    font-size: 10px;
-    color: #5E6673;
-    padding: 8px;
-    border-top: 1px solid #2B3139;
-    background-color: #161a1e;
+    text-align: center; font-size: 10px; color: #5E6673; padding: 8px;
+    border-top: 1px solid #2B3139; background-color: #161a1e;
 }
 
-/* Trạng thái trống */
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 0;
-    color: #848E9C;
-    font-size: 13px;
-}
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; color: #848E9C; font-size: 13px; }
 
-/* Thanh cuộn đẹp (Custom Scrollbar) */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: #1E2329;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #474D57;
-    border-radius: 3px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #5E6673;
-}
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #1E2329; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #474D57; border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #5E6673; }
 
-/* Responsive cho Popup trên Mobile */
 @media (max-width: 480px) {
-    .ai-popup {
-        width: 300px;
-        right: -50px; /* Căn chỉnh lại trên màn hình nhỏ */
-    }
+    .ai-popup { width: 300px; right: -50px; }
 }
