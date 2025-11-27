@@ -1,4 +1,5 @@
 import redis
+import logging
 from clickhouse_driver import Client
 from config import (
     REDIS_HOST, REDIS_PORT, REDIS_DB,
@@ -24,3 +25,29 @@ try:
     )
 except Exception as e:
     print(f"❌ Lỗi kết nối ClickHouse: {e}")
+
+# --- 3. INIT DB (Helper) ---
+def init_db():
+    """Khởi tạo bảng News nếu chưa có (được gọi khi API start)"""
+    if not ch_client:
+        print("⚠️ Không thể khởi tạo DB vì kết nối ClickHouse thất bại.")
+        return
+
+    try:
+        # Tạo bảng News
+        ch_client.execute("""
+        CREATE TABLE IF NOT EXISTS news (
+            source_id String,
+            title String,
+            content String,
+            published_at DateTime,
+            url String,
+            related_entities Array(String), 
+            sentiment_score Float32,
+            created_at DateTime DEFAULT now()
+        ) ENGINE = MergeTree()
+        ORDER BY (published_at, source_id);
+        """)
+        print("✅ News table initialized successfully.")
+    except Exception as e:
+        print(f"❌ Error initializing DB table: {e}")

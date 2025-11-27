@@ -8,8 +8,6 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
     networks:
       - trading-network
 
@@ -163,6 +161,23 @@ services:
     networks:
       - trading-network
 
+  # ==================== [NEW] REAL NEWS CRAWLER (Tin tức) ====================
+  # Thêm service này để chạy crawler tin tức thật
+  news-producer:
+    build: 
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: news_producer
+    command: python real_news_producer.py 
+    depends_on:
+      - clickhouse
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+    volumes:
+      - ./producer:/app
+    networks:
+      - trading-network
+
   # ==================== API (CẬP NHẬT CHO CODE MỚI) ====================
   api:
     build:
@@ -179,17 +194,20 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=9000
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=12345
       - CLICKHOUSE_DATABASE=default
+      - CLICKHOUSE_DB=default
+      # [NEW] Key Gemini cho tính năng AI Narrative (đã có trong file của bạn)
+      - GEMINI_API_KEY=AIzaSyDrLs0ITlh6uqokNj5zWp1IWiiRGQh9JuE
     volumes:
       - ./api:/app
     networks:
       - trading-network
 
- 
   # ==================== REDIS & UI (Giữ nguyên của bạn) ====================
   redis:
     image: redis:7.2
@@ -223,6 +241,8 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # [THÊM MỚI] Cần thiết để worker gọi API phân tích
+      - API_URL=http://api:8000
     restart: always
     networks:
       - trading-network
