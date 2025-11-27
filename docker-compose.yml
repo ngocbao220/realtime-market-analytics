@@ -189,24 +189,24 @@ services:
     networks:
       - trading-network
 
-  # ==================== DASHBOARD (CẬP NHẬT CHO CODE MỚI) ====================
-  #dashboard:
-  #  build:
-  #    context: ./dashboard
-  #    dockerfile: Dockerfile
-  #  container_name: dashboard
-  #  depends_on:
-  #    - api
-  #  ports:
-  #    - "8501:8501"
-  #  environment:
-      # [CẬP NHẬT QUAN TRỌNG]: Sửa API_PORT thành API_URL chuẩn
-  #    - API_URL=http://api:8000
-  #  volumes:
-  #    - ./dashboard:/app
-  #  command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
-  #  networks:
-  #    - trading-network
+  #==================== DASHBOARD (CẬP NHẬT CHO CODE MỚI) ====================
+  dashboard:
+   build:
+     context: ./dashboard
+     dockerfile: Dockerfile
+   container_name: dashboard
+   depends_on:
+     - api
+   ports:
+     - "8501:8501"
+   environment:
+     # [CẬP NHẬT QUAN TRỌNG]: Sửa API_PORT thành API_URL chuẩn
+     - API_URL=http://api:8000
+   volumes:
+     - ./dashboard:/app
+   command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+   networks:
+     - trading-network
   
   # ==================== REDIS & UI (Giữ nguyên của bạn) ====================
   redis:

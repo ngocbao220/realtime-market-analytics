@@ -3,91 +3,112 @@
 .symbol-info-container {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Đẩy các phần tử dàn trải */
-  padding: 16px 24px;
+  /* justify-content: space-between; <-- Bỏ dòng này để không dàn trải */
+  padding: 10px 20px; /* Giảm padding một chút */
   background-color: #161a1e;
   border-bottom: 1px solid #2B3139;
-  font-family: sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Font chuẩn hơn */
   color: #EAECEF;
-  flex-wrap: wrap; /* Cho phép xuống dòng nếu màn hình bé */
-  gap: 20px;
+  height: 60px; /* Cố định chiều cao để căn giữa tốt hơn */
+  box-sizing: border-box;
+  white-space: nowrap; /* Ngăn xuống dòng để giữ layout ngang */
 }
 
-/* --- Phần Trái: Tên Coin --- */
-.symbol-identity {
+/* ================= GROUP 1: IDENTITY & PRICE (Bên trái) ================= */
+
+/* --- Phần Identity (Tên Coin) --- */
+.info-group.identity {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  margin-right: 24px; /* Khoảng cách với phần giá */
 }
 
 .coin-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px; /* Nhỏ lại một chút */
+  height: 28px;
 }
 
-.symbol-name {
-  font-size: 1.5rem; /* 24px */
-  font-weight: 700;
-  color: #EAECEF;
-}
-
-.symbol-link {
-  font-size: 0.8rem;
-  color: #848E9C;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* --- Phần Giữa: Giá Lớn --- */
-.current-price-block {
+.name-col {
   display: flex;
   flex-direction: column;
 }
 
+.symbol-name {
+  font-size: 18px; /* Giảm từ 24px xuống 18px cho gọn */
+  font-weight: 600;
+  color: #EAECEF;
+  line-height: 1.2;
+}
+
+.symbol-link {
+  font-size: 11px; /* Nhỏ lại */
+  color: #848E9C;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+/* --- Phần Giá Lớn --- */
+.info-group.price-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 24px; /* Khoảng cách nội bộ */
+  margin-right: 24px; /* Khoảng cách với phần Stats */
+  border-right: 1px solid #2B3139; /* Đường kẻ phân cách kiểu Binance */
+  height: 36px; /* Chiều cao cho đường kẻ */
+}
+
 .price-large {
-  font-size: 2rem; /* 32px */
-  font-weight: 700;
+  font-size: 20px; /* Giảm từ 32px xuống 20px để cân đối hơn */
+  font-weight: 600;
+  line-height: 1.1;
 }
 
 .price-fiat {
-  font-size: 0.875rem;
-  color: #EAECEF;
+  font-size: 11px;
+  color: #848E9C; /* Dùng màu xám nhạt thay vì trắng */
+  line-height: 1.1;
 }
 
-/* --- Phần Phải: Stats 24h (Grid layout) --- */
-.market-stats {
+/* ================= GROUP 2: STATS (Bên phải) ================= */
+
+.info-group.stats-grid {
   display: flex;
   align-items: center;
-  gap: 32px; /* Khoảng cách giữa các chỉ số */
+  gap: 20px; /* Giảm khoảng cách giữa các cột stats từ 32px xuống 20px */
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  /* gap: 4px; <-- Bỏ gap để label và value sát nhau hơn */
 }
 
 .stat-label {
-  font-size: 0.75rem; /* 12px */
+  font-size: 11px; /* Nhỏ và gọn */
   color: #848E9C;
+  margin-bottom: 2px; /* Khoảng cách rất nhỏ với value */
 }
 
 .stat-value {
-  font-size: 0.875rem; /* 14px */
+  font-size: 12px; /* Nhỏ và tinh tế */
   color: #EAECEF;
   font-weight: 500;
 }
 
-/* Màu tiện ích */
+/* --- Màu sắc tiện ích --- */
 .text-green { color: #0ECB81; }
 .text-red { color: #F6465D; }
+.star-icon { color: #848E9C; }
 
-/* Responsive cho mobile: Ẩn bớt các chỉ số phụ hoặc cho cuộn */
+/* --- Responsive --- */
+/* Trên màn hình nhỏ, ẩn bớt các chỉ số phụ để tránh vỡ layout */
 @media (max-width: 1024px) {
-  .market-stats {
-    display: none; /* Hoặc dùng overflow-x: auto nếu muốn cuộn */
+  .info-group.stats-grid {
+    display: none;
   }
-  .symbol-info-container {
-     justify-content: space-between;
+  .info-group.price-group {
+    border-right: none; /* Bỏ đường kẻ khi không còn stats bên cạnh */
   }
 }

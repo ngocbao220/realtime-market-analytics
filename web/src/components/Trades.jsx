@@ -1,41 +1,53 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/Trades.css';
-import { api } from '../api/client';
 
 const Trades = ({ symbol = "BTCUSDT" }) => {
   const [trades, setTrades] = useState([]);
-  const intervalRef = useRef(null);
-
-  // Hàm lấy dữ liệu
-  const fetchTrades = async () => {
-    try {
-      const data = await api.getTrades(symbol, "real", 50); // Lấy 50 trade gần nhất
-      if (Array.isArray(data)) {
-        // API thường trả về mảng cũ -> mới hoặc mới -> cũ.
-        // Binance UI luôn hiển thị mới nhất ở trên cùng (index 0).
-        // Nếu API trả về trade cũ nhất ở đầu mảng, ta cần reverse.
-        // Ở đây giả định API trả về đúng chuẩn (Mới nhất ở đầu hoặc cuối tùy server),
-        // Ta sẽ kiểm tra timestamp để sort cho chắc chắn: Mới nhất (time lớn nhất) lên đầu.
-        
-        const sortedData = data.sort((a, b) => {
-            // Lấy time từ trường time hoặc timestamp hoặc created_at
-            const timeA = a.time || a.timestamp || 0;
-            const timeB = b.time || b.timestamp || 0;
-            return timeB - timeA; // Giảm dần (Mới nhất lên đầu)
-        });
-
-        setTrades(sortedData);
-      }
-    } catch (error) {
-      console.error("Trades fetch error:", error);
-    }
-  };
+  const wsRef = useRef(null);
 
   useEffect(() => {
-    fetchTrades();
-    // Refresh mỗi 2 giây
-    intervalRef.current = setInterval(fetchTrades, 2000);
-    return () => clearInterval(intervalRef.current);
+    // 1. Định nghĩa URL WebSocket
+    // Lưu ý: Dùng mode=history hoặc real_time tùy logic backend, 
+    // nhưng limit=50 để lấp đầy danh sách lúc đầu.
+    const WS_URL = `ws://localhost:8000/market/ws/trades/${symbol}?type=real&mode=real_time&limit=50`;
+    
+    // 2. Khởi tạo kết nối
+    const ws = new WebSocket(WS_URL);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+        console.log(`Connected to Trades WS: ${symbol}`);
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            
+            // Backend trả về 1 mảng các trade: [{}, {}, ...]
+            if (Array.isArray(data)) {
+                // Nếu Backend trả về trade mới nhất nằm cuối, ta cần đảo ngược (reverse) 
+                // để trade mới nhất hiện lên trên cùng giao diện.
+                // Dựa vào ảnh bạn gửi, có vẻ danh sách đã được sort sẵn hoặc trả về cả cụm.
+                // Ta cứ set trực tiếp, nếu thấy ngược chiều thì thêm .reverse() vào.
+                
+                setTrades(data); 
+            }
+        } catch (err) {
+            console.error("Error parsing Trades WS message:", err);
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error("WebSocket Trades Error:", error);
+    };
+
+    // 3. Cleanup khi component unmount
+    return () => {
+        if (wsRef.current) {
+            wsRef.current.close();
+            console.log(`Closed Trades WS: ${symbol}`);
+        }
+    };
   }, [symbol]);
 
   // --- FORMATTERS ---
@@ -47,11 +59,9 @@ const Trades = ({ symbol = "BTCUSDT" }) => {
     return parseFloat(num).toFixed(5);
   };
 
-  const formatTime = (ts) => {
-    // Xử lý timestamp (API có thể trả về mili-giây hoặc giây)
-    if (!ts) return "--:--:--";
-    const date = new Date(ts); // Nếu API trả về giây thì nhân 1000: new Date(ts * 1000)
-    return date.toLocaleTimeString('en-GB', { hour12: false }); // HH:MM:SS
+  // Backend của bạn trả về string "16:08:42" nên hiển thị luôn, không cần format lại
+  const formatTime = (timeData) => {
+    return timeData; 
   };
 
   return (
@@ -70,37 +80,23 @@ const Trades = ({ symbol = "BTCUSDT" }) => {
 
       {/* List */}
       <div className="trades-list">
-        {trades.length === 0 && <div className="text-center py-4 opacity-50">Loading...</div>}
+        {trades.length === 0 && <div className="text-center py-4 opacity-50">Waiting for data...</div>}
         
         {trades.map((trade, index) => {
-           // Xác định màu sắc:
-           // 1. Dựa vào trường 'side' ('buy'/'sell')
-           // 2. Hoặc 'isBuyerMaker' (true = Sell/Red, false = Buy/Green)
-           
-           let isBuy = false;
-           if (trade.side) {
-               isBuy = trade.side.toLowerCase() === 'buy';
-           } else if (trade.isBuyerMaker !== undefined) {
-               isBuy = !trade.isBuyerMaker; // Binance logic
-           }
-
+           // Logic xác định màu sắc dựa trên 'side' từ JSON backend trả về
+           const isBuy = trade.side === 'BUY'; 
            const colorClass = isBuy ? 'text-green' : 'text-red';
            
-           // Fallback an toàn cho các trường dữ liệu
-           const price = trade.price || trade.p || 0;
-           const amount = trade.amount || trade.qty || trade.q || 0;
-           const time = trade.time || trade.T || Date.now();
-
            return (
              <div key={index} className="trade-row">
                <span className={`tr-col col-price ${colorClass}`}>
-                  {formatPrice(price)}
+                  {formatPrice(trade.price)}
                </span>
                <span className={`tr-col col-amount text-white`}>
-                  {formatAmount(amount)}
+                  {formatAmount(trade.amount)}
                </span>
-               <span className={`tr-col col-time`}>
-                  {formatTime(time)}
+               <span className={`tr-col col-time text-right`}>
+                  {formatTime(trade.time)}
                </span>
              </div>
            );
