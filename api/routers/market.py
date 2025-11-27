@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconn
 from services import orderbook_service, trades_service
 import asyncio
 router = APIRouter(prefix="/market", tags=["Market Data"])
+from config import SPEED_WEBSOCKET
 
 #@router.get("/orderbook/{symbol}")
 #def get_orderbook(
@@ -33,7 +34,7 @@ async def websocket_orderbook(
             # lấy dữ liệu orderbook mới nhất từ Redis
             orderbook = orderbook_service.get_orderbook(symbol, type=type, side=side)
             await websocket.send_json(orderbook)
-            await asyncio.sleep(1)  # Gửi dữ liệu mỗi giây
+            await asyncio.sleep(SPEED_WEBSOCKET)  # Gửi dữ liệu mỗi giây
     except WebSocketDisconnect:
         print(f"Client disconnected from orderbook {symbol}")
 

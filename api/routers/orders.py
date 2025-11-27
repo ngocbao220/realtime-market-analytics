@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from services import order_service 
 from schemas.models import PlaceOrderRequest
 import asyncio
-
+from config import SPEED_WEBSOCKET
 router = APIRouter(prefix="/orders", tags=["Trading"])
 
 @router.post("")
@@ -76,7 +76,7 @@ async def websocket_my_orders(websocket: WebSocket, user_id: str):
                 # await websocket.send_json({"error": "Error fetching data"})
 
             # 4. Nghỉ 1 giây rồi mới cập nhật tiếp (tránh spam server)
-            await asyncio.sleep(1)
+            await asyncio.sleep(SPEED_WEBSOCKET)
 
     except WebSocketDisconnect:
         print(f"User {user_id} disconnected")

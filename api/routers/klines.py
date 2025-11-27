@@ -1,7 +1,10 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from services import kline_service
 import asyncio
+from config import SPEED_WEBSOCKET
+
 router = APIRouter(tags=["Kline"])
+
 
 # Dùng để vẽ biểu đồ lịch sử giá + biểu đồ nến
 #@router.get("/klines/{symbol}")
@@ -20,6 +23,6 @@ async def websocket_klines(
             # lấy dữ liệu kline mới nhất từ Redis
             klines = kline_service.get_kline_hybrid_logic(symbol, interval, limit)
             await websocket.send_json(klines)
-            await asyncio.sleep(1)  # Gửi dữ liệu mỗi giây
+            await asyncio.sleep(SPEED_WEBSOCKET)  # Gửi dữ liệu mỗi giây
     except WebSocketDisconnect:
         print(f"Client disconnected from klines {symbol}")
