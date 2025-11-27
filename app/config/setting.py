@@ -20,7 +20,7 @@ REDIS_PORT = 6379
 CHECKPOINT_DIR = "/checkpoints"
 
 # Tốc độ ghi dữ liệu mới vào Clickhouse và Redis
-PROCESSING_TIME="2 seconds"
+PROCESSING_TIME="1 seconds"
 
 # Tốc độ lấy dữ liệu từ Redis
 SPEED = 0.3
