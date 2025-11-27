@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { User, X, TrendingUp, Newspaper, FileText } from 'lucide-react';
+import { User, X, Sparkles, Activity } from 'lucide-react'; // Dùng icon Sparkles cho AI
 import { api } from '../api/client';
 import '../styles/Header.css';
 
@@ -9,18 +9,12 @@ const Header = () => {
   const [tickers, setTickers] = useState([]);
   const ws = useRef(null);
 
-  // --- STATE QUẢN LÝ POPUP & DATA ---
-  const [activePopup, setActivePopup] = useState(null); // 'news' | 'price' | null
-  
-  // Data cho nút Dự báo
+  // --- STATE QUẢN LÝ AI INSIGHT ---
+  const [isOpen, setIsOpen] = useState(false); // Chỉ cần boolean vì có 1 nút
   const [aiAlerts, setAiAlerts] = useState([]); 
-  
-  // Data cho nút Tin tức (Dạng tóm tắt văn bản)
-  const [newsSummary, setNewsSummary] = useState({ summary: "", time: "" });
-  
   const [loading, setLoading] = useState(false);
 
-  // 1. WEBSOCKET TICKER (Giữ nguyên logic cũ)
+  // 1. WEBSOCKET TICKER (Giữ nguyên)
   useEffect(() => {
     const socketUrl = api.getWebSocketUrl('/ws/tickers');
     ws.current = new WebSocket(socketUrl);
@@ -33,57 +27,38 @@ const Header = () => {
     return () => { if (ws.current) ws.current.close(); };
   }, []);
 
-  // 2. FETCH DATA KHI MỞ POPUP (Logic mới)
+  // 2. FETCH DATA KHI MỞ POPUP
   useEffect(() => {
     let interval;
     const fetchData = async () => {
-      // Nếu không mở popup nào thì không fetch
-      if (!activePopup) return;
+      if (!isOpen) return;
 
       setLoading(true);
       try {
-        let url = '';
-        if (activePopup === 'price') url = `${API_BASE_URL}/narrative/alerts`;
-        else if (activePopup === 'news') url = `${API_BASE_URL}/narrative/news-summary`;
-
-        if (url) {
-          const res = await fetch(url);
-          
-          // Kiểm tra lỗi HTTP (404, 500...)
-          if (!res.ok) {
-            console.error(`Fetch failed: ${res.status}`);
-            setLoading(false);
-            return;
-          }
-
+        const res = await fetch(`${API_BASE_URL}/narrative/alerts`);
+        if (res.ok) {
           const data = await res.json();
-
-          // Cập nhật State tương ứng
-          if (activePopup === 'price') {
-            setAiAlerts(Array.isArray(data) ? data : []);
-          } else if (activePopup === 'news') {
-            // Data trả về format { summary: "...", time: "..." }
-            setNewsSummary(data || { summary: "", time: "" });
-          }
+          // Sắp xếp lại nếu cần, hoặc để nguyên
+          setAiAlerts(Array.isArray(data) ? data : []);
         }
       } catch (e) {
-        console.error("API Error:", e);
+        console.error("AI Fetch Error:", e);
       } finally {
         setLoading(false);
       }
     };
 
-    if (activePopup) {
-      fetchData(); // Gọi ngay khi mở
-      interval = setInterval(fetchData, 30000); // Tự refresh mỗi 30s
+    if (isOpen) {
+      fetchData();
+      interval = setInterval(fetchData, 30000); // Refresh mỗi 30s
     }
 
     return () => clearInterval(interval);
-  }, [activePopup]);
+  }, [isOpen]);
 
   return (
     <header className="header-container">
-      {/* --- LEFT SECTION (Logo, Nav, Ticker) --- */}
+      {/* --- LEFT SECTION --- */}
       <div className="left-section">
         <div className="brand-logo">BINANCE</div>
         <nav className="nav-menu">
@@ -108,153 +83,107 @@ const Header = () => {
         </div>
       </div>
 
-      {/* --- RIGHT SECTION (AI Buttons & Popup) --- */}
+      {/* --- RIGHT SECTION --- */}
       <div className="right-section">
-        <div className="ai-actions-group">
-          
-          {/* NÚT 1: TIN TỨC */}
-          <button
-            className={`action-btn ${activePopup === 'news' ? 'active' : ''}`}
-            onClick={() => setActivePopup(activePopup === 'news' ? null : 'news')}
+        
+        <div className="ai-wrapper">
+          {/* NÚT AI DUY NHẤT */}
+          <button 
+            className={`ai-btn-pro ${isOpen ? 'active' : ''}`} 
+            onClick={() => setIsOpen(!isOpen)}
           >
-            <Newspaper size={16} />
-            <span>Tin tức</span>
+            <Sparkles size={16} className={isOpen ? "animate-spin-slow" : ""} />
+            <span>AI Market Insight</span>
           </button>
 
-          {/* NÚT 2: DỰ BÁO */}
-          <button
-            className={`action-btn ${activePopup === 'price' ? 'active' : ''}`}
-            onClick={() => setActivePopup(activePopup === 'price' ? null : 'price')}
-          >
-            <TrendingUp size={16} />
-            <span>Dự báo</span>
-          </button>
-
-          {/* --- KHUNG POPUP HIỂN THỊ NỘI DUNG --- */}
-          {activePopup && (
-            <div className="ai-popup">
+          {/* POPUP HIỂN THỊ */}
+          {isOpen && (
+            <div className="ai-popup-pro">
+              {/* Header Popup */}
               <div className="ai-popup-header">
-                <div className="ai-header-left">
-                  {activePopup === 'news' ? (
-                    <FileText size={18} className="text-[#F0B90B]" />
-                  ) : (
-                    <TrendingUp size={18} className="text-[#F0B90B]" />
-                  )}
-                  <span className="ai-title">
-                    {activePopup === 'news' ? 'Tổng hợp Tin tức (7 ngày)' : 'Dự báo & Phân tích (24h)'}
-                  </span>
+                <div className="flex items-center gap-2">
+                    <div className="live-dot"></div> {/* Chấm xanh nhấp nháy */}
+                    <span className="text-[#F0B90B] font-bold text-sm tracking-wide">LIVE MARKET ANALYSIS</span>
                 </div>
-                <button className="close-btn" onClick={() => setActivePopup(null)}>
+                <button className="close-btn" onClick={() => setIsOpen(false)}>
                   <X size={18} />
                 </button>
               </div>
 
+              {/* Body Popup */}
               <div className="ai-popup-body custom-scrollbar">
                 
-                {/* === VIEW 1: TIN TỨC (TÓM TẮT VĂN BẢN) === */}
-                {activePopup === 'news' && (
-                  <div className="content-frame">
-                    {loading && !newsSummary.summary ? (
-                      <div className="loading-state">
-                         <div className="typing-indicator"><span></span><span></span><span></span></div>
-                         <p>AI đang đọc tin tức tuần qua...</p>
-                      </div>
-                    ) : (
-                      <div className="text-block">
-                          {/* Header nhỏ hiển thị thời gian cập nhật */}
-                          <div className="flex justify-between items-center mb-3 border-b border-[#474D57] pb-2">
-                              <span className="text-[#F0B90B] font-bold text-xs uppercase tracking-wide">
-                                  ⚡ AI Market Recap
-                              </span>
-                              <span className="text-[10px] text-[#848E9C]">
-                                  Cập nhật: {newsSummary.time || "Mới nhất"}
-                              </span>
-                          </div>
-
-                          {/* Nội dung tóm tắt (Hỗ trợ xuống dòng) */}
-                          <div className="text-[#EAECEF] text-[13px] leading-6 whitespace-pre-line text-justify">
-                              {newsSummary.summary || "Chưa có dữ liệu tổng hợp. Vui lòng quay lại sau."}
-                          </div>
-
-                          <div className="mt-4 pt-2 border-t border-[#2B3139] text-[10px] text-[#5E6673] italic">
-                              *Tổng hợp tự động từ dữ liệu On-chain & Báo chí.
-                          </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* === VIEW 2: DỰ BÁO (LIST COIN CARDS) === */}
-                {activePopup === 'price' && (
-                  <div className="content-frame">
-                    <div className="mb-2 text-xs text-gray-500 italic text-center">
-                      Dữ liệu được AI phân tích & cập nhật tự động mỗi 30 phút.
+                {loading && aiAlerts.length === 0 ? (
+                    <div className="loading-container">
+                        <div className="spinner"></div>
+                        <p>AI đang quét thị trường...</p>
                     </div>
+                ) : aiAlerts.length === 0 ? (
+                    <div className="empty-state">
+                        Hệ thống đang khởi động AI... <br/> Vui lòng chờ trong giây lát.
+                    </div>
+                ) : (
+                    <div className="cards-list">
+                        {aiAlerts.map((alert, idx) => {
+                            if (!alert || !alert.symbol) return null;
 
-                    {loading && aiAlerts.length === 0 ? (
-                      <div className="loading-state">
-                        <div className="typing-indicator"><span></span><span></span><span></span></div>
-                        <p>Đang tải nhận định...</p>
-                      </div>
-                    ) : aiAlerts.length === 0 ? (
-                      <div className="loading-state">Hệ thống đang khởi động... (Vui lòng chờ 1-2 phút)</div>
-                    ) : (
-                      aiAlerts.map((alert, idx) => {
-                        // Kiểm tra dữ liệu an toàn
-                        if (!alert || !alert.symbol) return null;
+                            // Xử lý dữ liệu hiển thị
+                            const displaySymbol = alert.symbol.replace("USDT", "");
+                            const changeVal = alert.change ? parseFloat(alert.change) : 0;
+                            const isPump = changeVal >= 0;
+                            
+                            // Class màu sắc
+                            const colorClass = isPump ? "text-up" : "text-down";
+                            const bgClass = isPump ? "bg-up-dim" : "bg-down-dim";
+                            const arrow = isPump ? "▲" : "▼";
 
-                        // 1. Cắt đuôi USDT để hiển thị đẹp (BTCUSDT -> BTC)
-                        const displaySymbol = alert.symbol.replace("USDT", "");
-                        
-                        // 2. Tính toán màu sắc
-                        const changeVal = alert.change ? parseFloat(alert.change) : 0;
-                        const isPump = changeVal >= 0;
-                        const colorClass = isPump ? "text-[#0ECB81]" : "text-[#F6465D]";
-                        const arrow = isPump ? "↑" : "↓";
+                            // Xử lý text nhận định
+                            let summary = alert.analysis?.summary || "Đang cập nhật...";
+                            summary = summary.replace(/^Nhận định:\s*/i, "");
 
-                        // 3. Xử lý văn bản nhận định (Xóa prefix thừa nếu có)
-                        let summary = alert.analysis?.summary || "Đang cập nhật...";
-                        summary = summary.replace(/^Nhận định:\s*/i, "");
+                            return (
+                                <div key={idx} className="ai-card-pro slide-in" style={{animationDelay: `${idx * 0.1}s`}}>
+                                    {/* Card Header */}
+                                    <div className="card-top">
+                                        <div className="coin-identity">
+                                            <div className="coin-avatar">{displaySymbol[0]}</div>
+                                            <div className="coin-info-col">
+                                                <span className="coin-name">{displaySymbol}/USDT</span>
+                                                <span className="coin-price">${parseFloat(alert.current_price || alert.price).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Phần trăm biến động */}
+                                        <div className={`change-badge ${bgClass} ${colorClass}`}>
+                                            {arrow} {Math.abs(changeVal).toFixed(2)}%
+                                        </div>
+                                    </div>
 
-                        return (
-                          <div key={idx} className="ai-card">
-                            <div className="card-header border-b border-[#2B3139] pb-2 mb-2">
-                              <div className="flex items-center gap-2">
-                                {/* Icon Coin giả lập */}
-                                <div className="w-6 h-6 rounded-full bg-[#2B3139] flex items-center justify-center text-[10px] font-bold text-[#EAECEF] border border-[#474D57]">
-                                  {displaySymbol[0]}
+                                    {/* Card Body (AI Text) */}
+                                    <div className="card-body">
+                                        <div className="ai-label">
+                                            <Sparkles size={12} className="text-[#F0B90B]" />
+                                            <span>AI Insight:</span>
+                                        </div>
+                                        <p className="ai-text">
+                                            {summary}
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Timestamp Footer */}
+                                    <div className="card-footer">
+                                        <span>Cập nhật: {alert.timestamp}</span>
+                                    </div>
                                 </div>
-                                <span className="coin-name text-sm">{displaySymbol}/USDT</span>
-                              </div>
-
-                              <div className={`text-xs font-mono font-bold ${colorClass} bg-[#2B3139] px-2 py-1 rounded`}>
-                                {arrow} {Math.abs(changeVal).toFixed(2)}%
-                              </div>
-                            </div>
-
-                            <div className="card-content">
-                              <p className="text-[13px] leading-relaxed text-[#B7BDC6]">
-                                <span className="text-[#F0B90B] font-bold">AI Nhận định: </span>
-                                {summary}
-                              </p>
-                              <div className="mt-2 text-[10px] text-[#5E6673] flex justify-between">
-                                {/* Format giá tiền có dấu phẩy */}
-                                <span>Giá: ${alert.current_price || alert.price}</span>
-                                <span>Cập nhật: {alert.timestamp}</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                            );
+                        })}
+                    </div>
                 )}
-
               </div>
             </div>
           )}
         </div>
-        
+
         <div className="user-avatar"><User size={16} /></div>
       </div>
     </header>

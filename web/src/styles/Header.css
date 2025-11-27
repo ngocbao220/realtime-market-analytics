@@ -1,9 +1,6 @@
 /* src/styles/Header.css */
 
-/* ==========================================================================
-   1. CONTAINER CHÍNH & CẤU TRÚC CHUNG
-   ========================================================================== */
-
+/* --- CẤU TRÚC CHUNG (Giữ nguyên layout cơ bản) --- */
 .header-container {
   display: flex;
   align-items: center;
@@ -12,431 +9,227 @@
   height: 64px;
   background-color: #161a1e;
   border-bottom: 1px solid #2B3139;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Roboto', -apple-system, sans-serif;
   color: #EAECEF;
-  
-  /* QUAN TRỌNG: Để Popup không bị cắt khi tràn ra ngoài */
-  overflow: visible; 
   position: relative; 
   z-index: 50; 
+  overflow: visible;
 }
 
-/* ==========================================================================
-   2. KHU VỰC BÊN TRÁI (Logo, Nav, Ticker)
-   ========================================================================== */
+/* --- Left Section (Logo, Nav, Ticker) --- */
+.left-section { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 0; margin-right: 16px; }
+.brand-logo { color: #F0B90B; font-weight: 700; font-size: 1.5rem; cursor: pointer; white-space: nowrap; }
+.nav-menu { display: none; align-items: center; gap: 24px; font-size: 0.875rem; font-weight: 500; color: #848E9C; }
+.nav-link { text-decoration: none; color: inherit; transition: color 0.2s; white-space: nowrap; }
+.nav-link:hover { color: #F0B90B; }
 
-.left-section {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex: 1;
-  min-width: 0; /* Giúp ticker co giãn đúng cách */
-  margin-right: 16px;
-}
-
-/* Logo */
-.brand-logo {
-  color: #F0B90B;
-  font-weight: 700;
-  font-size: 1.5rem;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* Menu Navigation */
-.nav-menu {
-  display: none; /* Ẩn trên mobile */
-  align-items: center;
-  gap: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #848E9C;
-  flex-shrink: 0;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: inherit;
-  transition: color 0.2s;
-  white-space: nowrap;
-}
-
-.nav-link:hover {
-  color: #F0B90B;
-}
-
-/* Ticker (Dòng giá chạy ngang) */
-.ticker-section {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex: 1;
-  overflow-x: auto;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-  border-left: 1px solid #2B3139;
-  padding-left: 24px;
-  margin-left: 8px;
-}
-
-.ticker-section::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
-
-.ticker-item {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
-.ticker-symbol {
-  font-weight: 700;
-  color: #848E9C;
-}
-
-.ticker-price {
-  color: #EAECEF;
-  font-weight: 500;
-}
-
-/* Màu biến động giá */
+.ticker-section { display: flex; align-items: center; gap: 24px; flex: 1; overflow-x: auto; scrollbar-width: none; border-left: 1px solid #2B3139; padding-left: 24px; margin-left: 8px; }
+.ticker-section::-webkit-scrollbar { display: none; }
+.ticker-item { display: flex; flex-direction: column; font-size: 0.75rem; white-space: nowrap; }
+.ticker-symbol { font-weight: 700; color: #848E9C; }
+.ticker-price { color: #EAECEF; font-weight: 500; }
 .text-green { color: #0ECB81; }
 .text-red { color: #F6465D; }
 
+/* --- Right Section --- */
+.right-section { display: flex; align-items: center; gap: 16px; flex-shrink: 0; overflow: visible; }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; background-color: #2B3139; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: 0.2s; }
+.user-avatar:hover { background-color: #474D57; }
+
 /* ==========================================================================
-   3. KHU VỰC BÊN PHẢI (User & AI Actions)
+   STYLE NÚT AI PRO (MỚI)
    ========================================================================== */
+.ai-wrapper { position: relative; }
 
-.right-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-  /* Đảm bảo overflow visible để popup hiện được */
-  overflow: visible; 
-}
-
-/* --- Nhóm Nút AI Mới --- */
-.ai-actions-group {
-    position: relative;
-    display: flex;
-    gap: 8px; /* Khoảng cách giữa 2 nút */
-}
-
-/* Style chung cho 2 nút (Tin tức & Dự báo) */
-.action-btn {
+.ai-btn-pro {
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #2B3139; /* Nền tối */
-    color: #848E9C; /* Chữ xám */
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 0.8rem;
-    border: 1px solid transparent; /* Viền trong suốt để tránh nhảy layout khi hover */
+    background: linear-gradient(135deg, #F0B90B 0%, #F8D33A 100%);
+    color: #000;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    white-space: nowrap;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(240, 185, 11, 0.2);
 }
 
-/* Hover nút */
-.action-btn:hover {
-    color: #F0B90B; /* Chữ vàng */
-    background-color: #343a40; /* Nền sáng hơn xíu */
-    border-color: #474D57;
+.ai-btn-pro:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(240, 185, 11, 0.4);
 }
 
-/* Khi nút đang được chọn (Active) */
-.action-btn.active {
-    background-color: rgba(240, 185, 11, 0.1); /* Nền vàng nhạt trong suốt */
-    color: #F0B90B;
-    border-color: #F0B90B;
+.ai-btn-pro.active {
+    background: #EAECEF;
+    color: #161a1e;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Avatar User */
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #2B3139;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  flex-shrink: 0;
-  transition: background-color 0.2s;
+/* Animation xoay nhẹ icon khi mở */
+.animate-spin-slow {
+    animation: spin 3s linear infinite;
 }
-
-.user-avatar:hover {
-    background-color: #474D57;
-}
+@keyframes spin { 100% { transform: rotate(360deg); } }
 
 /* ==========================================================================
-   4. POPUP HIỂN THỊ NỘI DUNG (Tin tức / Dự báo)
+   POPUP CHUYÊN NGHIỆP
    ========================================================================== */
-
-.ai-popup {
+.ai-popup-pro {
     position: absolute;
-    top: 52px; /* Đẩy xuống dưới nút một chút */
-    right: 0; 
-    width: 400px; /* Độ rộng thoải mái để đọc */
-    max-width: 90vw; /* Không vượt quá chiều rộng màn hình mobile */
+    top: 55px; right: 0;
+    width: 380px;
+    max-width: 90vw;
     background-color: #1E2329;
-    border: 1px solid #474D57;
-    border-radius: 8px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8); /* Đổ bóng sâu để nổi bật trên nền chart */
-    z-index: 9999; /* Luôn nằm trên cùng */
-    display: flex;
-    flex-direction: column;
+    border: 1px solid #2B3139;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    z-index: 100;
+    display: flex; flex-direction: column;
     overflow: hidden;
-    animation: fadeIn 0.2s ease-out;
+    /* Hiệu ứng trượt xuống */
+    animation: slideDownFade 0.3s ease-out forwards;
     transform-origin: top right;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+@keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Header của Popup */
 .ai-popup-header {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center;
-    padding: 12px 16px; 
-    background-color: #2B3139; 
-    border-bottom: 1px solid #161a1e;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px;
+    background-color: #252a30;
+    border-bottom: 1px solid #2B3139;
 }
 
-.ai-header-left { 
-    display: flex; 
-    align-items: center; 
-    gap: 8px; 
+.live-dot {
+    width: 8px; height: 8px;
+    background-color: #0ECB81;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #0ECB81;
+    animation: pulse 1.5s infinite;
 }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-.ai-title { 
-    font-weight: 700; 
-    font-size: 14px; 
-    color: #EAECEF; 
-}
+.close-btn { background: none; border: none; color: #848E9C; cursor: pointer; transition: color 0.2s; }
+.close-btn:hover { color: #EAECEF; }
 
-.close-btn { 
-    background: none; 
-    border: none; 
-    color: #848E9C; 
-    cursor: pointer; 
-    display: flex; 
-    align-items: center;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-
-.close-btn:hover { 
-    color: #EAECEF; 
-    background-color: #343a40;
-}
-
-/* Body của Popup (Vùng cuộn nội dung) */
 .ai-popup-body {
-    height: 400px; /* Chiều cao cố định */
+    height: 420px;
     overflow-y: auto;
     padding: 16px;
     background-color: #161a1e;
 }
 
 /* ==========================================================================
-   5. STYLE CHO CÁC LOẠI NỘI DUNG BÊN TRONG POPUP
+   CARD NHẬN ĐỊNH (ANIMATION & STYLE)
    ========================================================================== */
+.cards-list { display: flex; flex-direction: column; gap: 12px; }
 
-/* --- Style chung --- */
-.content-frame {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* --- Style cho Văn bản (Tin tức) --- */
-.text-block {
-    background-color: #2B3139; 
-    padding: 16px;
-    border-radius: 6px;
-    border-left: 3px solid #F0B90B; /* Điểm nhấn màu vàng bên trái */
-    color: #B7BDC6;
-}
-
-/* --- Style cho Card (Dự báo giá) --- */
-.ai-card {
-    background-color: #2B3139;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 10px;
-    transition: transform 0.2s, background-color 0.2s;
+.ai-card-pro {
+    background-color: #252a30;
+    border-radius: 8px;
+    padding: 14px;
     border: 1px solid transparent;
+    transition: all 0.2s ease;
+    /* Khởi tạo trạng thái ẩn cho animation */
+    opacity: 0; 
+    transform: translateX(20px);
 }
 
-.ai-card:hover { 
-    transform: translateX(4px); 
-    background-color: #2d333b;
+/* Animation Slide-in cho từng card */
+.ai-card-pro.slide-in {
+    animation: slideInRight 0.4s ease-out forwards;
+}
+
+@keyframes slideInRight {
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.ai-card-pro:hover {
+    background-color: #2B3139;
     border-color: #474D57;
+    transform: translateX(-2px); /* Hiệu ứng hover nhẹ */
 }
 
-.card-header { 
-    display: flex; 
-    justify-content: space-between; 
-    margin-bottom: 8px; 
-    align-items: center;
+/* Header của Card */
+.card-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 10px;
 }
 
-.coin-info {
-    display: flex;
-    align-items: center;
+.coin-identity { display: flex; align-items: center; gap: 10px; }
+.coin-avatar {
+    width: 32px; height: 32px;
+    background: #2B3139; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #EAECEF;
+    border: 1px solid #474D57;
+}
+.coin-info-col { display: flex; flex-direction: column; }
+.coin-name { font-weight: 700; font-size: 14px; color: #EAECEF; }
+.coin-price { font-size: 11px; color: #848E9C; font-family: 'Roboto Mono', monospace; }
+
+/* Badge phần trăm tăng giảm */
+.change-badge {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: flex; align-items: center; gap: 4px;
 }
 
-.coin-name { 
-    font-weight: 700; 
-    color: #EAECEF; 
-    font-size: 14px; 
+/* Màu sắc chuyên nghiệp */
+.text-up { color: #0ECB81; }
+.text-down { color: #F6465D; }
+.bg-up-dim { background-color: rgba(14, 203, 129, 0.12); }
+.bg-down-dim { background-color: rgba(246, 70, 93, 0.12); }
+
+/* Body Card */
+.card-body {
+    background-color: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
 }
 
-.time-stamp { 
-    font-size: 11px; 
-    color: #848E9C; 
+.ai-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: #F0B90B;
+    margin-bottom: 4px; text-transform: uppercase;
 }
 
-.coin-change { 
-    font-size: 11px; 
-    padding: 2px 6px; 
-    border-radius: 4px; 
-    font-weight: 600; 
-    margin-left: 8px; 
-}
-
-.trend-up { 
-    background-color: rgba(14, 203, 129, 0.15); 
-    color: #0ECB81; 
-}
-
-.trend-down { 
-    background-color: rgba(246, 70, 93, 0.15); 
-    color: #F6465D; 
-}
-
-/* Nội dung phân tích trong card */
-.card-content p {
+.ai-text {
     font-size: 13px;
     line-height: 1.5;
-    color: #EAECEF;
+    color: #B7BDC6;
     margin: 0;
+    text-align: justify;
 }
 
-/* --- Loading & Empty States --- */
-.loading-state { 
-    text-align: center; 
-    color: #848E9C; 
-    margin-top: 60px; 
-    font-size: 12px; 
+.card-footer {
+    text-align: right;
+    font-size: 10px;
+    color: #5E6673;
 }
 
-.typing-indicator span { 
-    display: inline-block; 
-    width: 6px; 
-    height: 6px; 
-    background-color: #848E9C; 
-    border-radius: 50%; 
-    margin: 0 2px; 
-    animation: bounce 1.4s infinite ease-in-out both; 
-}
+/* --- Loading & Empty --- */
+.loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #848E9C; gap: 10px; font-size: 12px; }
+.spinner { width: 20px; height: 20px; border: 2px solid #2B3139; border-top: 2px solid #F0B90B; border-radius: 50%; animation: spin 1s linear infinite; }
+.empty-state { text-align: center; color: #848E9C; margin-top: 50%; transform: translateY(-50%); font-size: 13px; line-height: 1.6; }
 
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-
-@keyframes bounce { 
-    0%, 80%, 100% { transform: scale(0); } 
-    40% { transform: scale(1); } 
-}
-
-/* --- Scrollbar Custom --- */
+/* Scrollbar */
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #474D57; border-radius: 2px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #5E6673; }
 
-/* ==========================================================================
-   6. RESPONSIVE (MEDIA QUERIES)
-   ========================================================================== */
-
-@media (min-width: 768px) {
-  .header-container { padding: 0 24px; }
-  .action-btn { padding: 8px 16px; }
-}
-
-@media (min-width: 1024px) {
-  .nav-menu { display: flex; }
-}
-
+/* Mobile */
 @media (max-width: 768px) {
-    /* Trên mobile: Ẩn chữ trong nút, chỉ hiện icon */
-    .action-btn span { display: none; }
-    
-    /* Popup dịch sang trái chút để không bị tràn màn hình */
-    .ai-popup { width: 320px; right: -60px; }
-}
-
-/* ... Giữ nguyên các class cũ ... */
-
-/* Style cho News Card (Trong Popup Tin tức) */
-.news-card {
-    background-color: #2B3139;
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    border-left: 3px solid #474D57;
-    transition: background-color 0.2s;
-}
-
-.news-card:hover {
-    background-color: #343a40;
-    border-left-color: #F0B90B;
-}
-
-.news-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #EAECEF;
-    margin-bottom: 6px;
-    line-height: 1.4;
-}
-
-.news-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    color: #848E9C;
-}
-
-.news-source {
-    font-weight: 700;
-    color: #F0B90B;
-    text-transform: uppercase;
-}
-
-.text-block {
-    background-color: #2B3139;
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px solid #474D57;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-}
-
-.whitespace-pre-line {
-    white-space: pre-line; /* Để hiển thị xuống dòng đúng như AI viết */
-}
-
-.text-justify {
-    text-align: justify;
+    .nav-menu { display: none; }
+    .ai-popup-pro { width: 320px; right: -50px; }
 }
