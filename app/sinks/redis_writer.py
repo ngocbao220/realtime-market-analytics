@@ -43,123 +43,136 @@ def write_trades_to_redis(batch_df, type="real"):
 
     batch_df.foreachPartition(process_partition)
 
-
 # ==========================================
-# 2. HÀM GHI ORDERBOOK (Sổ lệnh)
+# 2. HÀM GHI ORDERBOOK (Sổ lệnh) - CỐ ĐỊNH ĐỘ SÂU
 # ==========================================
 def write_orderbook_to_redis(batch_df, type='real'):
-    """
-    Logic chuẩn: MERGE -> SORT -> TRIM
-    1. Merge: Cập nhật toàn bộ data mới vào Redis (không cắt input).
-    2. Sort: Redis ZSET tự động sắp xếp.
-    3. Trim: Chỉ giữ lại 100 lệnh tốt nhất trong Redis, xóa phần thừa ở cả ZSET và HASH.
-
-    Kết quả như sau:
-    - Đối với asks thì là 100 thằng có giá mua cao nhất
-    - Đối với bids thì là 100 thằng có giá bán thấp nhất
-    => Cả 2 thằng đều được sắp xếp từ thấp đến cao nên lúc lấy từ redis
-    để so lệnh khớp thì nhớ lấy thằng cuối cùng của bids để so s
-    """
     def process_partition(iterator):
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
-        pipe = r.pipeline()
+        pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+        r = redis.Redis(connection_pool=pool)
+        pipe = r.pipeline(transaction=False)
         
         for row in iterator:
             data = row.asDict()
             symbol = data.get("Symbol")
-            if not symbol: continue
-
-            # Xử lý thời gian
+            if not symbol: 
+                continue
+            
+            # Timestamp
             raw_time = data.get("Event_time")
-            if isinstance(raw_time, (datetime.datetime, datetime.time)):
-                readable_time_str = raw_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-            else:
-                readable_time_str = str(raw_time)
-
-            # =========================================================
-            # 1. XỬ LÝ ASKS (BÁN) - TỪ THẤP ĐẾN CAO
-            # =========================================================
-
-            # Key để lưu lên redis
-            ask_z_key = f"orderbook:{type}:{symbol}:asks" 
-            ask_h_key = f"orderbook:{type}:{symbol}:asks:data"
+            ts = raw_time.strftime("%Y-%m-%d %H:%M:%S.%f") if raw_time else str(datetime.datetime.now())
             
-            # Lấy dữ liệu từ kafka chuyển lên
+            # =========================================================
+            # XỬ LÝ ASKS (BÁN) - ĐẢM BẢO CỐ ĐỊNH ORDERBOOK_DEPTH
+            # =========================================================
             ask_prices = data.get("Ask_prices", [])
-            ask_quantities = data.get("Ask_quantities", [])
-
-            # BƯỚC 1: MERGE (Cập nhật toàn bộ Input vào Redis)
-            for p, q in zip(ask_prices, ask_quantities):
-                price_str = str(p)
-                vol_float = float(q)
-
-                if vol_float > 0:
-                    record = {"t": readable_time_str, "p": float(p), "a": vol_float}
-                    pipe.zadd(ask_z_key, {price_str: float(p)}) # Đoạn này đã sắp xếp từ thấp đến cao
-                    pipe.hset(ask_h_key, price_str, json.dumps(record))
-                else:
-                    # Nếu volume = 0 (lệnh hủy/khớp hết) -> Xóa ngay
-                    pipe.zrem(ask_z_key, price_str)
-                    pipe.hdel(ask_h_key, price_str)
-
-            # Thực thi việc Update trước để Redis có dữ liệu mới nhất
-            pipe.execute() 
+            ask_qtys = data.get("Ask_quantities", [])
             
-            # BƯỚC 2 & 3: SORT & TRIM (Dọn dẹp rác sau khi đã Merge)
-            # Asks trong Redis xếp: [Rẻ nhất (0) ... Đắt nhất (-1)]
-            # Ta muốn giữ 0 -> 99. Xóa từ 100 -> Hết.
-            cleanup_pipe = r.pipeline()
+            if ask_prices and len(ask_prices) > 0:
+                ask_z = f"orderbook:real:{symbol}:asks"
+                ask_h = f"orderbook:real:{symbol}:asks:data"
+                
+                # Lấy dữ liệu cũ từ Redis để bổ sung nếu thiếu
+                old_asks = []
+                if len(ask_prices) < ORDERBOOK_DEPTH:
+                    try:
+                        old_ask_prices = r.zrange(ask_z, 0, -1, withscores=True)
+                        for p_str, score in old_ask_prices:
+                            old_data = r.hget(ask_h, p_str)
+                            if old_data:
+                                old_asks.append(json.loads(old_data))
+                    except:
+                        pass
+                
+                # Xóa dữ liệu cũ
+                pipe.delete(ask_z)
+                pipe.delete(ask_h)
+                
+                # Ghi dữ liệu mới
+                count = 0
+                for p, q in zip(ask_prices, ask_qtys):
+                    if count >= ORDERBOOK_DEPTH:
+                        break
+                    q_float = float(q)
+                    if q_float > 0:
+                        p_str = str(p)
+                        pipe.zadd(ask_z, {p_str: float(p)})
+                        pipe.hset(ask_h, p_str, json.dumps({"t": ts, "p": float(p), "a": q_float}))
+                        count += 1
+                
+                # Bổ sung từ dữ liệu cũ nếu chưa đủ ORDERBOOK_DEPTH
+                if count < ORDERBOOK_DEPTH and old_asks:
+                    # Sắp xếp asks cũ theo giá tăng dần
+                    old_asks_sorted = sorted(old_asks, key=lambda x: x['p'])
+                    # Lọc bỏ các giá đã có trong dữ liệu mới
+                    new_prices_set = set(ask_prices)
+                    for old_ask in old_asks_sorted:
+                        if count >= ORDERBOOK_DEPTH:
+                            break
+                        if old_ask['p'] not in new_prices_set:
+                            p_str = str(old_ask['p'])
+                            pipe.zadd(ask_z, {p_str: old_ask['p']})
+                            pipe.hset(ask_h, p_str, json.dumps(old_ask))
+                            count += 1
             
-            # Tìm danh sách thừa (nằm ngoài top 100)
-            excess_asks = r.zrange(ask_z_key, ORDERBOOK_DEPTH, -1)
-            
-            if excess_asks:
-                cleanup_pipe.zrem(ask_z_key, *excess_asks)     # Xóa trong Index
-                cleanup_pipe.hdel(ask_h_key, *excess_asks)     # Xóa trong Data Hash (Quan trọng!)
-
-
             # =========================================================
-            # 2. XỬ LÝ BIDS (MUA) - TỪ CAO XUỐNG THẤP
+            # XỬ LÝ BIDS (MUA) - ĐẢM BẢO CỐ ĐỊNH ORDERBOOK_DEPTH
             # =========================================================
-            bid_z_key = f"orderbook:{type}:{symbol}:bids"
-            bid_h_key = f"orderbook:{type}:{symbol}:bids:data"
-            
             bid_prices = data.get("Bid_prices", [])
-            bid_quantities = data.get("Bid_quantities", [])
-
-            # BƯỚC 1: MERGE
-            for p, q in zip(bid_prices, bid_quantities):
-                price_str = str(p)
-                vol_float = float(q)
-
-                if vol_float > 0:
-                    record = {"t": readable_time_str, "p": float(p), "a": vol_float}
-                    pipe.zadd(bid_z_key, {price_str: float(p)})
-                    pipe.hset(bid_h_key, price_str, json.dumps(record))
-                else:
-                    pipe.zrem(bid_z_key, price_str)
-                    pipe.hdel(bid_h_key, price_str)
+            bid_qtys = data.get("Bid_quantities", [])
             
-            # Update trước
+            if bid_prices and len(bid_prices) > 0:
+                bid_z = f"orderbook:real:{symbol}:bids"
+                bid_h = f"orderbook:real:{symbol}:bids:data"
+                
+                # Lấy dữ liệu cũ từ Redis để bổ sung nếu thiếu
+                old_bids = []
+                if len(bid_prices) < ORDERBOOK_DEPTH:
+                    try:
+                        old_bid_prices = r.zrevrange(bid_z, 0, -1, withscores=True)
+                        for p_str, score in old_bid_prices:
+                            old_data = r.hget(bid_h, p_str)
+                            if old_data:
+                                old_bids.append(json.loads(old_data))
+                    except:
+                        pass
+                
+                # Xóa dữ liệu cũ
+                pipe.delete(bid_z)
+                pipe.delete(bid_h)
+                
+                # Ghi dữ liệu mới
+                count = 0
+                for p, q in zip(bid_prices, bid_qtys):
+                    if count >= ORDERBOOK_DEPTH:
+                        break
+                    q_float = float(q)
+                    if q_float > 0:
+                        p_str = str(p)
+                        pipe.zadd(bid_z, {p_str: float(p)})
+                        pipe.hset(bid_h, p_str, json.dumps({"t": ts, "p": float(p), "a": q_float}))
+                        count += 1
+                
+                # Bổ sung từ dữ liệu cũ nếu chưa đủ ORDERBOOK_DEPTH
+                if count < ORDERBOOK_DEPTH and old_bids:
+                    # Sắp xếp bids cũ theo giá giảm dần
+                    old_bids_sorted = sorted(old_bids, key=lambda x: x['p'], reverse=True)
+                    # Lọc bỏ các giá đã có trong dữ liệu mới
+                    new_prices_set = set(bid_prices)
+                    for old_bid in old_bids_sorted:
+                        if count >= ORDERBOOK_DEPTH:
+                            break
+                        if old_bid['p'] not in new_prices_set:
+                            p_str = str(old_bid['p'])
+                            pipe.zadd(bid_z, {p_str: old_bid['p']})
+                            pipe.hset(bid_h, p_str, json.dumps(old_bid))
+                            count += 1
+            
+            # Thực thi pipeline
             pipe.execute()
-
-            # BƯỚC 2 & 3: SORT & TRIM
-            # Bids trong Redis xếp: [Thấp nhất (0) ... Cao nhất (-1)]
-            # Giá tốt nhất nằm ở CUỐI. Ta muốn giữ 100 ông cuối.
-            # Xóa từ đầu (0) đến -(100 + 1)
-            
-            # Tìm danh sách thừa (Giá thấp quá mức)
-            excess_bids = r.zrange(bid_z_key, 0, -(ORDERBOOK_DEPTH + 1))
-            
-            if excess_bids:
-                cleanup_pipe.zrem(bid_z_key, *excess_bids)
-                cleanup_pipe.hdel(bid_h_key, *excess_bids)
-
-            # Thực thi lệnh dọn dẹp
-            cleanup_pipe.execute()
-            
+        
         r.close()
-
+    
     batch_df.foreachPartition(process_partition)
 
 # ==========================================
