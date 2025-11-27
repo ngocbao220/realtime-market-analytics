@@ -1,29 +1,40 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
-// Import các trang (Lưu ý: Sửa lại đường dẫn Manage_user cho đúng thư mục pages)
+// --- 1. Import các trang (Đã sửa đường dẫn chuẩn vào folder pages) ---
 import Login from './pages/Login'; 
 import User_Dashboard from './pages/User_Dashboard'; 
 import Admin_Dashboard from './pages/Admin_Dashboard'; 
-import Manage_user from './components/Manage_user'; // <--- Đã sửa từ components thành pages
-import HistoryTrades from './components/HistoryTrades';
-import { TickerProvider } from './contexts/TickerContext'; // Import mới
+import Manage_user from './components/Manage_user';     // Sửa từ components -> pages
+import HistoryTrades from './components/HistoryTrades'; // Sửa từ components -> pages
 
-// --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
-const PrivateRoute = ({ children }) => {
+// --- 2. Import Context ---
+import { TickerProvider } from './contexts/TickerContext'; 
+
+// --- 3. CỔNG BẢO VỆ CHUNG (Layout cho tất cả trang cần đăng nhập) ---
+const ProtectedLayout = () => {
   const user = JSON.parse(localStorage.getItem("user"));
-  return user ? children : <Navigate to="/login" />;
+  
+  // Nếu chưa đăng nhập -> Đá ngay về Login
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Nếu đã đăng nhập -> Cho phép hiển thị các Route con bên trong (Outlet)
+  return <Outlet />;
 };
 
-// --- Component bảo vệ Route Admin (Chỉ admin mới vào được) ---
-const AdminRoute = ({ children }) => {
+// --- 4. CỔNG BẢO VỆ RIÊNG CHO ADMIN ---
+const AdminLayout = () => {
   const user = JSON.parse(localStorage.getItem("user"));
-  // Nếu chưa đăng nhập -> Login
-  if (!user) return <Navigate to="/login" />;
-  // Nếu đăng nhập nhưng không phải admin -> Về Dashboard thường
-  if (user.username !== "admin") return <Navigate to="/dashboard" />;
   
-  return children;
+  // Logic kiểm tra quyền Admin
+  if (user && user.username === "admin") {
+      return <Outlet />; // Cho phép đi tiếp
+  }
+  
+  // Nếu không phải admin -> Đá về Dashboard thường
+  return <Navigate to="/dashboard" replace />;
 };
 
 function App() {
@@ -34,69 +45,42 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* 1. MẶC ĐỊNH VÀO LOGIN (Khi truy cập trang chủ /) */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        
-        {/* Trang Login */}
-        <Route path="/login" element={<Login />} />
-      {/* Đặt Provider ở đây để bao bọc toàn bộ App hoặc chỉ bao bọc Dashboard */}
-      <TickerProvider> 
+      {/* Bao bọc TickerProvider ở ngoài cùng để mọi trang đều dùng được data */}
+      <TickerProvider>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
+          
+          {/* =========================================
+              KHU VỰC CÔNG KHAI (Public Routes)
+             ========================================= */}
           <Route path="/login" element={<Login />} />
 
-          <Route 
-            path="/dashboard" 
-            element={
-              <PrivateRoute>
-                <User_Dashboard onLogout={handleLogout} />
-              </PrivateRoute>
-            } 
-          />
+          {/* =========================================
+              KHU VỰC CẦN ĐĂNG NHẬP (Protected Routes)
+              Tất cả route nằm trong này đều bắt buộc phải Login
+             ========================================= */}
+          <Route element={<ProtectedLayout />}>
+              
+              {/* Mặc định vào trang gốc (/) sẽ nhảy vào dashboard */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Route cho Admin (Dashboard chính) */}
-        <Route 
-          path="/admin" 
-          element={
-            <AdminRoute>
-              <Admin_Dashboard />
-            </AdminRoute>
-          } 
-        />
+              {/* Trang Dashboard cho User thường */}
+              <Route path="/dashboard" element={<User_Dashboard onLogout={handleLogout} />} />
 
-        {/* Route Quản lý User (Chỉ Admin) */}
-        <Route 
-          path="/manage-users" 
-          element={
-            <AdminRoute>
-               <Manage_user />
-            </AdminRoute>
-          } 
-        />
-        {/* Route Lịch sử Giao dịch (Admin) */}
-        <Route 
-          path="/history-trades" 
-          element={
-            <AdminRoute>
-               <HistoryTrades />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Đường dẫn sai bất kỳ (404) -> Quay về Login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-          <Route 
-            path="/admin" 
-            element={
-              <AdminRoute>
-                <Admin_Dashboard />
-              </AdminRoute>
-            } 
-          />
-          
-          <Route path="*" element={<Navigate to="/login" />} />
+              {/* --- KHU VỰC CỦA ADMIN --- */}
+              <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<Admin_Dashboard />} />
+                  <Route path="/manage-users" element={<Manage_user />} />
+                  <Route path="/history-trades" element={<HistoryTrades />} />
+              </Route>
+
+          </Route>
+
+          {/* =========================================
+              XỬ LÝ ĐƯỜNG DẪN RÁC (404)
+              Gõ bậy bạ -> Đá về login hết
+             ========================================= */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+
         </Routes>
       </TickerProvider>
     </BrowserRouter>
