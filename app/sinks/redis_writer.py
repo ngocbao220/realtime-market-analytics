@@ -4,8 +4,6 @@ import time
 import datetime
 from config.setting import REDIS_HOST, REDIS_PORT, SPEED, ORDERBOOK_DEPTH
 
-
-
 # ==========================================
 # 1. HÀM GHI TRADES (Giao dịch khớp lệnh)
 # ==========================================

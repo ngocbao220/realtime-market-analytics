@@ -1,51 +1,60 @@
-// Trang này hiển thị Tickers + Nút gọi AI
-import React, { useState, useEffect } from "react";
-export default function Header() {
-    const userData = localStorage.getItem("user");
-    const user = userData ? JSON.parse(userData) : null
-    const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
-    const [showSetting, setShowSetting] = useState(false);
+import React, { useEffect, useState } from 'react';
+import { Bot, User } from 'lucide-react'; 
+import { api } from '../api/client'; 
+// Import file CSS vừa tạo
+import '../styles/Header.css'; 
 
-    useEffect(() => {
-    document.body.style.background = theme === "dark" ? "#222" : "#fff";
-    document.body.style.color = theme === "dark" ? "#fff" : "#222";
-    localStorage.setItem("theme", theme);
-  }, [theme])
+const Header = () => {
+  const [tickers, setTickers] = useState([]);
 
-    const handleLogout = () => {
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-  };
-    const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
+  useEffect(() => {
+    const fetchTickers = async () => {
+      try {
+        const data = await api.getTickers(); 
+        if (Array.isArray(data)) {
+           setTickers(data.slice(0, 4));
+        }
+      } catch (e) { console.log("Chưa kết nối API"); }
+    };
+    fetchTickers();
+  }, []);
 
-    return (
-       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 32px", background: theme === "dark" ? "#222" : "#eee", color: theme === "dark" ? "#fff" : "#222" }}>
-      <h2>Crypto Dashboard</h2>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <button onClick={() => setShowSetting(!showSetting)} style={{ padding: "6px 16px", borderRadius: 4, border: "none", background: "#3498db", color: "#fff", cursor: "pointer" }}>
-          Setting
+  return (
+    <header className="header-container">
+      {/* Logo & Nav Wrapper */}
+      <div className="left-section">
+        <div className="brand-logo">BINANCE</div>
+        
+        {/* Menu Desktop */}
+        <nav className="nav-menu">
+          <a href="#" className="nav-link">Markets</a>
+          <a href="#" className="nav-link">Trade</a>
+        </nav>
+
+        {/* Ticker chạy giá */}
+        <div className="ticker-section">
+          {tickers.map((coin) => (
+             <div key={coin.symbol} className="ticker-item">
+                <span className="ticker-symbol">{coin.symbol}</span>
+                <span className="ticker-price">{coin.price}</span>
+             </div>
+          ))}
+          {tickers.length === 0 && <span className="ticker-loading">Loading Tickers...</span>}
+        </div>
+      </div>
+
+      {/* Nút AI & User */}
+      <div className="right-section">
+        <button className="ai-btn">
+          <Bot size={18} />
+          <span>AI Helper</span>
         </button>
-        {showSetting && (
-          <div style={{ position: "absolute", top: 56, right: 32, background: theme === "dark" ? "#333" : "#fff", color: theme === "dark" ? "#fff" : "#222", border: "1px solid #ccc", borderRadius: 8, padding: 16, zIndex: 10 }}>
-            <h4>Cài đặt giao diện</h4>
-            <button onClick={toggleTheme} style={{ padding: "6px 16px", borderRadius: 4, border: "none", background: "#2ecc71", color: "#fff", cursor: "pointer" }}>
-              Chuyển sang giao diện {theme === "dark" ? "sáng" : "tối"}
-            </button>
-          </div>
-        )}
-        {user ? (
-          <>
-            <span>Xin chào, <b>{user.username}</b></span>
-            <button onClick={handleLogout} style={{ padding: "6px 16px", borderRadius: 4, border: "none", background: "#e74c3c", color: "#fff", cursor: "pointer" }}>
-              Đăng xuất
-            </button>
-          </>
-        ) : (
-          <a href="/login" style={{ color: theme === "dark" ? "#fff" : "#222" }}>Đăng nhập</a>
-        )}
+        <div className="user-avatar">
+            <User size={16} />
+        </div>
       </div>
     </header>
   );
-}
+};
+
+export default Header;

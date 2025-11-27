@@ -1,0 +1,93 @@
+/* src/styles/SymbolInfo.css */
+
+.symbol-info-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Đẩy các phần tử dàn trải */
+  padding: 16px 24px;
+  background-color: #161a1e;
+  border-bottom: 1px solid #2B3139;
+  font-family: sans-serif;
+  color: #EAECEF;
+  flex-wrap: wrap; /* Cho phép xuống dòng nếu màn hình bé */
+  gap: 20px;
+}
+
+/* --- Phần Trái: Tên Coin --- */
+.symbol-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.coin-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.symbol-name {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 700;
+  color: #EAECEF;
+}
+
+.symbol-link {
+  font-size: 0.8rem;
+  color: #848E9C;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- Phần Giữa: Giá Lớn --- */
+.current-price-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.price-large {
+  font-size: 2rem; /* 32px */
+  font-weight: 700;
+}
+
+.price-fiat {
+  font-size: 0.875rem;
+  color: #EAECEF;
+}
+
+/* --- Phần Phải: Stats 24h (Grid layout) --- */
+.market-stats {
+  display: flex;
+  align-items: center;
+  gap: 32px; /* Khoảng cách giữa các chỉ số */
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem; /* 12px */
+  color: #848E9C;
+}
+
+.stat-value {
+  font-size: 0.875rem; /* 14px */
+  color: #EAECEF;
+  font-weight: 500;
+}
+
+/* Màu tiện ích */
+.text-green { color: #0ECB81; }
+.text-red { color: #F6465D; }
+
+/* Responsive cho mobile: Ẩn bớt các chỉ số phụ hoặc cho cuộn */
+@media (max-width: 1024px) {
+  .market-stats {
+    display: none; /* Hoặc dùng overflow-x: auto nếu muốn cuộn */
+  }
+  .symbol-info-container {
+     justify-content: space-between;
+  }
+}

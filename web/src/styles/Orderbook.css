@@ -1,0 +1,119 @@
+/* src/styles/OrderBook.css */
+
+.orderbook-container {
+  background-color: #161a1e;
+  width: 320px; /* Độ rộng tiêu chuẩn sidebar */
+  height: 100%;
+  font-family: 'Roboto', sans-serif; /* Font số hiển thị đẹp hơn */
+  font-size: 12px;
+  color: #848E9C;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Header --- */
+.ob-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  color: #EAECEF;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ob-icons {
+  display: flex;
+  gap: 12px;
+}
+
+.icon-group {
+    display: flex;
+    gap: 4px;
+}
+
+/* --- Table Header --- */
+.ob-table-header {
+  display: flex;
+  padding: 4px 16px;
+  margin-bottom: 4px;
+}
+
+.th-item {
+  flex: 1;
+}
+
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+/* --- Row & Data --- */
+.ob-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Ẩn thanh cuộn thừa */
+}
+
+.ob-row {
+  display: flex;
+  padding: 2px 16px;
+  cursor: pointer;
+  position: relative; /* Để căn chỉnh thanh depth */
+  z-index: 1;
+  height: 20px;
+  align-items: center;
+}
+
+.ob-row:hover {
+  background-color: #2B3139;
+}
+
+.td-item {
+  flex: 1;
+  z-index: 2; /* Hiển thị chữ đè lên thanh depth */
+  white-space: nowrap;
+}
+
+/* Màu sắc */
+.text-red { color: #F6465D; }
+.text-green { color: #0ECB81; }
+.text-white { color: #EAECEF; }
+
+/* --- Depth Bar (Thanh khối lượng chìm) --- */
+.depth-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 0; /* Nằm dưới chữ */
+  opacity: 0.15; /* Làm mờ */
+  transition: width 0.2s ease;
+}
+
+.bg-red { background-color: #F6465D; }
+.bg-green { background-color: #0ECB81; }
+
+/* --- Middle Ticker (Giá ở giữa) --- */
+.ob-ticker {
+  padding: 8px 16px;
+  border-top: 1px solid #2B3139;
+  border-bottom: 1px solid #2B3139;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.ticker-price-large {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ticker-mark {
+  font-size: 12px;
+  color: #848E9C;
+}
+
+/* Ẩn bớt dòng nếu màn hình bé */
+.scroll-hide {
+    overflow: hidden;
+}

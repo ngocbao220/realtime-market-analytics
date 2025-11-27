@@ -1,0 +1,69 @@
+/* src/styles/Trades.css */
+
+.trades-container {
+  background-color: #161a1e;
+  width: 320px; /* Bằng độ rộng Orderbook */
+  height: 100%;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #848E9C;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #2B3139; /* Đường kẻ ngăn cách với Chart */
+}
+
+/* --- Header --- */
+.trades-header {
+  padding: 12px 16px;
+  color: #EAECEF;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 1px solid #2B3139;
+}
+
+/* --- Table Columns --- */
+.trades-thead {
+  display: flex;
+  padding: 8px 16px;
+  font-size: 11px;
+}
+
+.tr-col {
+  flex: 1;
+}
+
+.col-price { flex: 1; text-align: left; }
+.col-amount { flex: 1; text-align: right; }
+.col-time { flex: 1; text-align: right; }
+
+/* --- List Rows --- */
+.trades-list {
+  flex: 1;
+  overflow-y: auto; /* Cho phép cuộn dọc */
+  overflow-x: hidden;
+}
+
+/* Ẩn thanh cuộn mặc định cho đẹp */
+.trades-list::-webkit-scrollbar {
+  width: 4px;
+}
+.trades-list::-webkit-scrollbar-thumb {
+  background: #2B3139;
+  border-radius: 2px;
+}
+
+.trade-row {
+  display: flex;
+  padding: 4px 16px;
+  cursor: pointer;
+  align-items: center;
+}
+
+.trade-row:hover {
+  background-color: #2B3139;
+}
+
+/* Màu sắc text */
+.text-green { color: #0ECB81; }
+.text-red { color: #F6465D; }
+.text-white { color: #EAECEF; }

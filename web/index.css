@@ -1,0 +1,12 @@
+/* stylelint-disable at-rule-no-unknown */
+/* Tailwind directives are processed by PostCSS/Tailwind; disable the unknown at-rule warning */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
+/* Thêm body reset để tránh bị viền trắng mặc định */
+body {
+  margin: 0;
+  background-color: #161A1E;
+}

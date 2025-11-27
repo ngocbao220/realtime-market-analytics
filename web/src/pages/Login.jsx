@@ -15,7 +15,7 @@ export default function Login() {
       const user = await api.loginOrRegister(username);
       if (user) {
         localStorage.setItem("user", JSON.stringify(user));
-        window.location.href = "/"; // Chuyển hướng sang dashboard
+        window.location.href = "/dashboard"; // Chuyển hướng sang dashboard
       } else {
         setError("Đăng nhập thất bại!");
       }
