@@ -3,7 +3,7 @@ import { User, X, TrendingUp, Newspaper, FileText } from 'lucide-react';
 import { api } from '../api/client';
 import '../styles/Header.css';
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = "http://34.124.203.62:8000";
 
 const Header = () => {
   const [tickers, setTickers] = useState([]);
