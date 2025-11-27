@@ -9,6 +9,7 @@ import os
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 API_URL = os.getenv("API_URL", "http://34.124.203.62:8000")
 CHECK_INTERVAL = 60  # Kiểm tra giá mỗi 60s
+TIME_OUT = 60      # Thời gian chờ giữa các lần phân tích AI khi có biến động mạnh (10 phút)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("PriceMonitor")
@@ -65,14 +66,14 @@ def monitor_loop():
                 
                 # TH2: Biến động mạnh (>= 3%) -> Cách nhau ít nhất 10 phút (600s)
                 elif abs(change_percent) >= 3.0:
-                    if current_time - last_time > 600: 
+                    if current_time - last_time > TIME_OUT: 
                         should_analyze = True
                         trend = "PUMP 🟢" if change_percent > 0 else "DUMP 🔴"
                         trigger_reason = f"🚨 ALERT {trend} (>3%)"
                 
                 # TH3: Thị trường bình thường -> Cập nhật mỗi 30 phút (1800s)
                 else:
-                    if current_time - last_time > 1800: 
+                    if current_time - last_time > TIME_OUT: 
                         should_analyze = True
                         trigger_reason = "📉 ROUTINE UPDATE (30m)"
 
