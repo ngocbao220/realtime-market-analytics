@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bot, User, X, ArrowLeft, MessageSquare, TrendingUp, Newspaper } from 'lucide-react'; // Thêm icon cần thiết
+import { Bot, User, X, ArrowLeft, MessageSquare, TrendingUp, Newspaper } from 'lucide-react'; 
 import { api } from '../api/client'; 
 import '../styles/Header.css'; 
 
@@ -11,10 +11,10 @@ const Header = () => {
   
   // State quản lý AI Panel
   const [showAIPanel, setShowAIPanel] = useState(false);
-  const [aiView, setAiView] = useState('menu'); // 'menu', 'summary', 'analysis'
+  const [aiView, setAiView] = useState('menu'); 
   const [aiAlerts, setAiAlerts] = useState([]);
 
-  // 1. WebSocket Ticker (Giữ nguyên)
+  // 1. WebSocket Ticker
   useEffect(() => {
     const socketUrl = api.getWebSocketUrl('/ws/tickers');
     ws.current = new WebSocket(socketUrl);
@@ -27,7 +27,7 @@ const Header = () => {
     return () => { if (ws.current) ws.current.close(); };
   }, []);
 
-  // 2. Fetch AI Alerts (Giữ nguyên logic fetch data)
+  // 2. Fetch AI Alerts
   useEffect(() => {
     let interval;
     if (showAIPanel && aiView === 'analysis') {
@@ -49,6 +49,11 @@ const Header = () => {
     return () => clearInterval(interval);
   }, [showAIPanel, aiView]);
 
+  const handleTogglePanel = () => {
+      console.log("Toggle AI Panel:", !showAIPanel); // Debug check
+      setShowAIPanel(!showAIPanel);
+  };
+
   const handleClosePanel = () => {
       setShowAIPanel(false);
       setTimeout(() => setAiView('menu'), 200);
@@ -56,7 +61,7 @@ const Header = () => {
 
   return (
     <header className="header-container">
-      {/* --- LEFT SECTION (Giữ nguyên) --- */}
+      {/* --- LEFT SECTION --- */}
       <div className="left-section">
         <div className="brand-logo">BINANCE</div>
         <nav className="nav-menu">
@@ -85,7 +90,7 @@ const Header = () => {
       <div className="right-section">
         <div className="ai-wrapper">
             {/* Nút mở Chatbot */}
-            <button className={`ai-btn ${showAIPanel ? 'active' : ''}`} onClick={() => setShowAIPanel(!showAIPanel)}>
+            <button className={`ai-btn ${showAIPanel ? 'active' : ''}`} onClick={handleTogglePanel}>
                 <Bot size={18} />
                 <span>AI Helper</span>
             </button>
@@ -111,30 +116,26 @@ const Header = () => {
 
                     <div className="ai-popup-body custom-scrollbar">
                         
-                        {/* VIEW 1: CHAT MENU (Lựa chọn) */}
+                        {/* VIEW 1: CHAT MENU */}
                         {aiView === 'menu' && (
                             <div className="ai-chat-container">
-                                {/* Tin nhắn chào của Bot */}
                                 <div className="chat-bubble bot">
                                     Xin chào! Tôi là trợ lý AI. Bạn muốn xem thông tin gì hôm nay?
                                 </div>
-                                
-                                {/* Các lựa chọn (Quick Replies) */}
                                 <div className="chat-options">
                                     <button className="option-btn" onClick={() => setAiView('summary')}>
                                         <Newspaper size={16} className="text-[#F0B90B]" />
-                                        <span>Tổng hợp tin tức trong 1 tuần qua về Crypto</span>
+                                        <span>Tổng hợp tin tức 1 tuần qua</span>
                                     </button>
-                                    
                                     <button className="option-btn" onClick={() => setAiView('analysis')}>
                                         <TrendingUp size={16} className="text-[#F0B90B]" />
-                                        <span>Nhận định biến động giá 24h của Crypto</span>
+                                        <span>Dự báo biến động giá 24h</span>
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* VIEW 2: NHẬN ĐỊNH BIẾN ĐỘNG GIÁ (Logic cũ) */}
+                        {/* VIEW 2: PHÂN TÍCH GIÁ */}
                         {aiView === 'analysis' && (
                             <div className="ai-content-view">
                                 <div className="chat-bubble bot mb-3">
@@ -152,7 +153,6 @@ const Header = () => {
                                         const isPump = alert.change >= 0;
                                         const trendClass = isPump ? "trend-up" : "trend-down";
                                         const colorClass = isPump ? "text-[#0ECB81]" : "text-[#F6465D]";
-                                        
                                         return (
                                             <div key={idx} className="ai-card">
                                                 <div className="card-header">
@@ -177,7 +177,7 @@ const Header = () => {
                             </div>
                         )}
 
-                        {/* VIEW 3: TỔNG HỢP TIN TỨC (Logic cũ/Placeholder) */}
+                        {/* VIEW 3: TIN TỨC */}
                         {aiView === 'summary' && (
                             <div className="ai-content-view">
                                 <div className="chat-bubble bot mb-3">
@@ -185,7 +185,7 @@ const Header = () => {
                                 </div>
                                 <div className="empty-state">
                                     <p className="text-[#EAECEF] font-bold">Tính năng đang phát triển 🚀</p>
-                                    <p className="text-[#848E9C]">AI sẽ sớm cung cấp báo cáo 168h tại đây.</p>
+                                    <p className="text-[#848E9C]">AI sẽ sớm cung cấp báo cáo tại đây.</p>
                                 </div>
                             </div>
                         )}
