@@ -3,6 +3,8 @@ import '../styles/OrderBook.css';
 import { MoreHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
 import { api } from '../api/client'; // Import API client
 
+
+
 const OrderBook = ({ symbol = "BTCUSDT" }) => {
   const [bids, setBids] = useState([]);
   const [asks, setAsks] = useState([]);
