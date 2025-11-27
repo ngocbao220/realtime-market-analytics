@@ -1,19 +1,17 @@
 version: "3.8"
 
 services:
-  # ==================== ZOOKEEPER (Giữ nguyên của bạn) ====================
+  # ==================== ZOOKEEPER ====================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
     networks:
       - trading-network
 
-  # ==================== KAFKA (Giữ nguyên của bạn) ====================
+  # ==================== KAFKA ====================
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -40,7 +38,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== KAFKA UI (Giữ nguyên của bạn) ====================
+  # ==================== KAFKA UI ====================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -53,7 +51,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== CLICKHOUSE (Giữ nguyên của bạn) ====================
+  # ==================== CLICKHOUSE ====================
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
@@ -74,7 +72,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK MASTER (Giữ nguyên của bạn) ====================
+  # ==================== SPARK CLUSTER ====================
   spark-master:
     build:
       context: ./app
@@ -89,7 +87,6 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK WORKER (Giữ nguyên của bạn) ====================
   spark-worker:
     build:
       context: ./app
@@ -108,7 +105,6 @@ services:
     networks:
       - trading-network
 
-  # ==================== SPARK SUBMIT (Giữ nguyên của bạn) ====================
   spark-submit:
     build:
       context: ./app
@@ -125,7 +121,6 @@ services:
       - ./checkpoints:/checkpoints
     environment:
       SPARK_MASTER_URL: spark://spark-master:7077
-    # Giữ nguyên lệnh command phức tạp của bạn vì nó đang hoạt động tốt
     command: >
       /opt/spark/bin/spark-submit
         --master spark://spark-master:7077
@@ -138,7 +133,7 @@ services:
     networks:
       - trading-network
 
-  # ==================== PRODUCER (Giữ nguyên của bạn) ====================
+  # ==================== MARKET DATA PRODUCER (Giá cả) ====================
   producer:
     build:
       context: ./producer
@@ -163,13 +158,29 @@ services:
     networks:
       - trading-network
 
-  # ==================== API (CẬP NHẬT CHO CODE MỚI) ====================
+  # ==================== [NEW] REAL NEWS CRAWLER (Tin tức) ====================
+  news-producer:
+    build: 
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: news_producer
+    # Chạy crawler tin tức thật
+    command: python real_news_producer.py 
+    depends_on:
+      - clickhouse
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+    volumes:
+      - ./producer:/app
+    networks:
+      - trading-network
+
+  # ==================== API (Backend & AI Brain) ====================
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     container_name: api
-    # [CẬP NHẬT QUAN TRỌNG]: Thêm command để chạy đúng file main.py
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - clickhouse
@@ -179,18 +190,21 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
       - CLICKHOUSE_HOST=clickhouse
       - CLICKHOUSE_PORT=9000
       - CLICKHOUSE_USER=default
       - CLICKHOUSE_PASSWORD=12345
       - CLICKHOUSE_DATABASE=default
+      - CLICKHOUSE_DB=default
+      # [QUAN TRỌNG] Key Gemini cho tính năng AI
+      - GEMINI_API_KEY=AIzaSyDKbJc2vUAnxm6MVgOf7KtnjfX3oGOPl7k
     volumes:
       - ./api:/app
     networks:
       - trading-network
 
- 
-  # ==================== REDIS & UI (Giữ nguyên của bạn) ====================
+  # ==================== REDIS ====================
   redis:
     image: redis:7.2
     container_name: redis
@@ -214,19 +228,24 @@ services:
     networks:
       - trading-network
 
-  # ==================== WORKER (Giữ nguyên của bạn) ====================
+  # ==================== WORKER (Monitor Giá & Trigger AI) ====================
   worker:
     build: ./worker
     container_name: worker
     depends_on:
       - redis
+      - api
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # [QUAN TRỌNG] API URL để gọi sang service API
+      - API_URL=http://api:8000
     restart: always
+    # Chạy script start.sh để chạy song song cả Price Monitor và Worker cũ
     networks:
       - trading-network
-  
+
+  # ==================== WEB (React Frontend) ====================
   web:
     build:
       context: ./web

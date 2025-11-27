@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from './components/Header';
 import SymbolInfo from './components/SymbolInfo';
-import OrderBook from './components/Orderbook';
+import OrderBook from './components/OrderBook';
 import Trades from './components/Trades';
 import TradingChart from './components/TradingChart';
 import './index.css';

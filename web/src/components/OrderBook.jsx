@@ -3,6 +3,8 @@ import '../styles/OrderBook.css';
 import { MoreHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
 import { api } from '../api/client'; // Import API client
 
+
+
 const OrderBook = ({ symbol = "BTCUSDT" }) => {
   const [bids, setBids] = useState([]);
   const [asks, setAsks] = useState([]);
@@ -161,11 +163,12 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
             <span className="td-item text-left text-green">{formatPrice(item.price)}</span>
             <span className="td-item text-right text-white opacity-90">{formatAmount(item.amount)}</span>
             <span className="td-item text-right text-white opacity-50">{formatTotal(item.total)}</span>
-          </div>
+          </div>   
         ))}
       </div>
     </div>
   );
 };
+
 
 export default OrderBook;
