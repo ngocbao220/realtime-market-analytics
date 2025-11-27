@@ -39,6 +39,7 @@ const Header = () => {
           const res = await fetch(`${API_BASE_URL}/narrative/alerts`);
           if (res.ok) {
             const data = await res.json();
+            console.log("Fetched AI Alerts:", data);  
             setAiAlerts(Array.isArray(data) ? data : []);
           }
         } else if (activePopup === 'news') {
@@ -46,6 +47,7 @@ const Header = () => {
           const res = await fetch(`${API_BASE_URL}/narrative/news`);
           if (res.ok) {
             const data = await res.json();
+            console.log("Fetched News List:", data);
             setNewsList(Array.isArray(data) ? data : []);
           }
         }
