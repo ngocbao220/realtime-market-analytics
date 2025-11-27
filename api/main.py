@@ -2,34 +2,41 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from services.user_service import init_special_account
-from routers import users, orders, market, klines, tickers
 
 # --- CẤU HÌNH LOGGING ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    force=True
-)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# --- LIFESPAN ---
+# --- IMPORT ROUTERS ---
+# Dùng try-except để tránh lỗi sập server nếu thiếu file
+try:
+    from routers import users, orders, market, klines, tickers
+    has_routers = True
+except ImportError as e:
+    logger.error(f"❌ Lỗi Import Routers: {e}")
+    has_routers = False
+
+# Mock service
+try:
+    from services.user_service import init_special_account
+except ImportError:
+    def init_special_account():
+        logger.warning("⚠️ Mock init_special_account")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logging.info("🚀 Starting Trading Backend...")
-
+    logger.info("🚀 Starting Trading Backend...")
     try:
-        init_special_account() 
-        logging.info("✅ Admin account verified/created.")
-    except Exception as e:
-        logging.error(f"❌ Failed to init admin: {e}")
-    
+        init_special_account()
+    except Exception:
+        pass
     yield
-    logging.info("🛑 Shutting down...")
+    logger.info("🛑 Shutting down...")
 
-# --- KHỞI TẠO APP ---
 app = FastAPI(title="Crypto API", version="2.0.0", lifespan=lifespan)
 
-# --- CẤU HÌNH CORS ---
+# --- KHẮC PHỤC LỖI CORS ---
+# Quan trọng: Dùng ["*"] để cho phép cả localhost, 127.0.0.1 và redirect
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -39,21 +46,17 @@ app.add_middleware(
 )
 
 # --- ĐĂNG KÝ ROUTER ---
-app.include_router(users.router)
-app.include_router(orders.router)
-app.include_router(market.router)
-app.include_router(klines.router)
-app.include_router(tickers.router)
+if has_routers:
+    app.include_router(users.router)
+    app.include_router(orders.router)
+    app.include_router(market.router)
+    app.include_router(klines.router)
+    app.include_router(tickers.router)
 
-# --- ROOT ENDPOINT ---
 @app.get("/")
 def root():
-    return {
-        "status": "ok",
-        "message": "Trading Backend is Running",
-    }
+    return {"status": "ok", "message": "Backend Running"}
 
 if __name__ == "__main__":
     import uvicorn
-    # Chạy trực tiếp file này
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

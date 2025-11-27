@@ -1,21 +1,20 @@
 import React from 'react';
+
 import Header from '../components/Header';
+import SymbolInfo from '../components/SymbolInfo';
 
-const User_Dashboard = () => {
+function User_Dashboard() {
   return (
-    // Wrapper màu đen bao phủ toàn màn hình
-    <div className="min-h-screen bg-[#161A1E] text-white">
+    <div>
+      <Header />       {/* Header cũ: Menu + Ticker chạy ngang */}
+      <SymbolInfo />   {/* Header mới: Thông tin chi tiết BTC/USDT */}
       
-      {/* 1. Hiển thị Header */}
-      <Header />
-
-      {/* 2. Khu vực nội dung bên dưới (Hiện tại để trống hoặc text tạm) */}
-      <div className="p-10 text-center text-gray-500">
-        <h2 className="text-xl">Khu vực này sẽ hiển thị Biểu đồ và Lệnh sau...</h2>
-      </div>
-
+      {/* Nội dung chính của trang (Chart, Orderbook...) nằm ở dưới */}
+      <main className="p-4 text-white">
+          Nội dung biểu đồ nến...
+      </main>
     </div>
   );
-};
+}
 
 export default User_Dashboard;
