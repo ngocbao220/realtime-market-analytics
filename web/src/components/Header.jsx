@@ -77,7 +77,7 @@ const Header = () => {
                 <button className="admin-nav-btn" onClick={() => navigate("/manage-users")}>
                     <Users size={16} /><span>Users</span>
                 </button>
-                <button className="admin-nav-btn" onClick={() => alert("Coming Soon!")}>
+                <button className="admin-nav-btn" onClick={() => navigate("/history-trades")}>
                     <Activity size={16} /><span>Trades</span>
                 </button>
             </>

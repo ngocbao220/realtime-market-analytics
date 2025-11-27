@@ -160,3 +160,29 @@
 .admin-container::-webkit-scrollbar-thumb:hover {
     background: #474D57;
 }
+.btn-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(240, 185, 11, 0.1); /* Màu vàng nhạt nền */
+  color: #F0B90B; /* Chữ vàng Binance */
+  border: 1px solid rgba(240, 185, 11, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0 4px; /* Khoảng cách nếu có nhiều nút */
+}
+
+.btn-settings:hover {
+  background-color: #F0B90B;
+  color: #1e2329; /* Chữ chuyển sang đen khi hover nền vàng */
+  box-shadow: 0 2px 8px rgba(240, 185, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-settings svg {
+  stroke-width: 2.5px; /* Làm icon đậm hơn chút */
+}

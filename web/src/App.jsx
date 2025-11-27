@@ -6,7 +6,7 @@ import Login from './pages/Login';
 import User_Dashboard from './pages/User_Dashboard'; 
 import Admin_Dashboard from './pages/Admin_Dashboard'; 
 import Manage_user from './components/Manage_user'; // <--- Đã sửa từ components thành pages
-
+import HistoryTrades from './components/HistoryTrades';
 // --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
 const PrivateRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -65,6 +65,15 @@ function App() {
           element={
             <AdminRoute>
                <Manage_user />
+            </AdminRoute>
+          } 
+        />
+        {/* Route Lịch sử Giao dịch (Admin) */}
+        <Route 
+          path="/history-trades" 
+          element={
+            <AdminRoute>
+               <HistoryTrades />
             </AdminRoute>
           } 
         />

@@ -196,3 +196,36 @@
 /* Màu tiện ích */
 .text-green { color: #0ECB81; }
 .text-red { color: #F6465D; }
+/* src/styles/Header.css */
+
+/* ... Các phần cũ giữ nguyên ... */
+
+.admin-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Tăng khoảng cách icon và chữ */
+  background-color: transparent; /* Nền trong suốt để tinh tế hơn */
+  color: #848E9C; /* Màu chữ xám chuẩn Binance */
+  border: 1px solid #474D57;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600; /* Chữ đậm hơn chút */
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Hiệu ứng mượt */
+  margin-right: 8px;
+  letter-spacing: 0.5px; /* Giãn chữ nhẹ */
+}
+
+.admin-nav-btn:hover {
+  background-color: #2B3139; /* Nền xám nhẹ khi hover */
+  color: #F0B90B; /* Chữ và Icon chuyển vàng Binance */
+  border-color: #F0B90B; /* Viền cũng vàng luôn */
+  transform: translateY(-1px); /* Nổi lên nhẹ */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* Đổ bóng nhẹ */
+}
+
+/* Thêm màu vàng cho icon bên trong khi hover cha */
+.admin-nav-btn:hover svg {
+    stroke: #F0B90B;
+}
