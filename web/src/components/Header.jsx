@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bot, User, X, ArrowLeft, MessageSquare, TrendingUp, Newspaper } from 'lucide-react'; 
+import { User, X, TrendingUp, Newspaper, FileText } from 'lucide-react'; 
 import { api } from '../api/client'; 
 import '../styles/Header.css'; 
 
@@ -9,12 +9,11 @@ const Header = () => {
   const [tickers, setTickers] = useState([]);
   const ws = useRef(null);
   
-  // State quản lý AI Panel
-  const [showAIPanel, setShowAIPanel] = useState(false);
-  const [aiView, setAiView] = useState('menu'); 
+  // State quản lý Popup nào đang mở ('news' | 'price' | null)
+  const [activePopup, setActivePopup] = useState(null);
   const [aiAlerts, setAiAlerts] = useState([]);
 
-  // 1. WebSocket Ticker
+  // 1. WebSocket Ticker (Giữ nguyên)
   useEffect(() => {
     const socketUrl = api.getWebSocketUrl('/ws/tickers');
     ws.current = new WebSocket(socketUrl);
@@ -27,10 +26,10 @@ const Header = () => {
     return () => { if (ws.current) ws.current.close(); };
   }, []);
 
-  // 2. Fetch AI Alerts
+  // 2. Fetch Data (Chỉ chạy khi mở popup 'price')
   useEffect(() => {
     let interval;
-    if (showAIPanel && aiView === 'analysis') {
+    if (activePopup === 'price') {
         const fetchAIAlerts = async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/narrative/alerts`);
@@ -47,16 +46,15 @@ const Header = () => {
         interval = setInterval(fetchAIAlerts, 5000); 
     }
     return () => clearInterval(interval);
-  }, [showAIPanel, aiView]);
+  }, [activePopup]);
 
-  const handleTogglePanel = () => {
-      console.log("Toggle AI Panel:", !showAIPanel); // Debug check
-      setShowAIPanel(!showAIPanel);
-  };
-
-  const handleClosePanel = () => {
-      setShowAIPanel(false);
-      setTimeout(() => setAiView('menu'), 200);
+  // Hàm toggle (Nếu bấm nút đang mở thì đóng, bấm nút khác thì chuyển)
+  const togglePopup = (type) => {
+      if (activePopup === type) {
+          setActivePopup(null);
+      } else {
+          setActivePopup(type);
+      }
   };
 
   return (
@@ -88,65 +86,72 @@ const Header = () => {
 
       {/* --- RIGHT SECTION --- */}
       <div className="right-section">
-        <div className="ai-wrapper">
-            {/* Nút mở Chatbot */}
-            <button className={`ai-btn ${showAIPanel ? 'active' : ''}`} onClick={handleTogglePanel}>
-                <Bot size={18} />
-                <span>AI Helper</span>
+        
+        {/* Nhóm 2 Nút Chức Năng Mới */}
+        <div className="ai-actions-group">
+            
+            {/* Nút 1: Tin Tức */}
+            <button 
+                className={`action-btn ${activePopup === 'news' ? 'active' : ''}`} 
+                onClick={() => togglePopup('news')}
+            >
+                <Newspaper size={16} />
+                <span>Tin tức</span>
             </button>
 
-            {/* KHUNG CHAT BOT */}
-            {showAIPanel && (
+            {/* Nút 2: Dự Báo/Phân Tích */}
+            <button 
+                className={`action-btn ${activePopup === 'price' ? 'active' : ''}`} 
+                onClick={() => togglePopup('price')}
+            >
+                <TrendingUp size={16} />
+                <span>Dự báo</span>
+            </button>
+
+            {/* KHUNG HIỂN THỊ NỘI DUNG (Popup dùng chung) */}
+            {activePopup && (
                 <div className="ai-popup">
                     <div className="ai-popup-header">
                         <div className="ai-header-left">
-                            {aiView !== 'menu' ? (
-                                <button className="back-btn" onClick={() => setAiView('menu')}>
-                                    <ArrowLeft size={18} />
-                                </button>
+                            {activePopup === 'news' ? (
+                                <FileText size={18} className="text-[#F0B90B]" />
                             ) : (
-                                <Bot size={18} className="ai-icon-gold" />
+                                <TrendingUp size={18} className="text-[#F0B90B]" />
                             )}
-                            <span className="ai-title">Chat Assistant</span>
+                            <span className="ai-title">
+                                {activePopup === 'news' ? 'Tổng hợp Tin tức (7 ngày)' : 'Phân tích Biến động (24h)'}
+                            </span>
                         </div>
-                        <button className="close-btn" onClick={handleClosePanel}>
+                        <button className="close-btn" onClick={() => setActivePopup(null)}>
                             <X size={18} />
                         </button>
                     </div>
 
                     <div className="ai-popup-body custom-scrollbar">
                         
-                        {/* VIEW 1: CHAT MENU */}
-                        {aiView === 'menu' && (
-                            <div className="ai-chat-container">
-                                <div className="chat-bubble bot">
-                                    Xin chào! Tôi là trợ lý AI. Bạn muốn xem thông tin gì hôm nay?
-                                </div>
-                                <div className="chat-options">
-                                    <button className="option-btn" onClick={() => setAiView('summary')}>
-                                        <Newspaper size={16} className="text-[#F0B90B]" />
-                                        <span>Tổng hợp tin tức 1 tuần qua</span>
-                                    </button>
-                                    <button className="option-btn" onClick={() => setAiView('analysis')}>
-                                        <TrendingUp size={16} className="text-[#F0B90B]" />
-                                        <span>Dự báo biến động giá 24h</span>
-                                    </button>
+                        {/* NỘI DUNG: TIN TỨC */}
+                        {activePopup === 'news' && (
+                            <div className="content-frame">
+                                <div className="text-block">
+                                    <h4 className="text-[#F0B90B] mb-2 font-bold">Điểm tin Crypto tuần qua:</h4>
+                                    <p className="text-[#EAECEF] text-sm leading-6">
+                                        {/* Đây là chỗ bạn "đẩy văn bản lên" sau này */}
+                                        Hiện tại chưa có dữ liệu tổng hợp. Hệ thống sẽ sớm cập nhật các tin tức vĩ mô quan trọng, sự kiện Halving và các thay đổi pháp lý ảnh hưởng đến thị trường.
+                                    </p>
+                                    <div className="mt-4 p-3 bg-[#2B3139] rounded text-xs text-[#848E9C]">
+                                        Nguồn: Tổng hợp từ các trang tin uy tín (Placeholder).
+                                    </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* VIEW 2: PHÂN TÍCH GIÁ */}
-                        {aiView === 'analysis' && (
-                            <div className="ai-content-view">
-                                <div className="chat-bubble bot mb-3">
-                                    Dưới đây là các phân tích biến động giá mới nhất:
-                                </div>
+                        {/* NỘI DUNG: DỰ BÁO GIÁ */}
+                        {activePopup === 'price' && (
+                            <div className="content-frame">
                                 {aiAlerts.length === 0 ? (
                                     <div className="loading-state">
-                                        <div className="typing-indicator">
-                                            <span></span><span></span><span></span>
-                                        </div>
-                                        <p>Đang phân tích dữ liệu...</p>
+                                        <div className="typing-indicator"><span></span><span></span><span></span></div>
+                                        <p>Đang quét dữ liệu thị trường...</p>
                                     </div>
                                 ) : (
                                     aiAlerts.map((alert, idx) => {
@@ -176,28 +181,11 @@ const Header = () => {
                                 )}
                             </div>
                         )}
-
-                        {/* VIEW 3: TIN TỨC */}
-                        {aiView === 'summary' && (
-                            <div className="ai-content-view">
-                                <div className="chat-bubble bot mb-3">
-                                    Đang tổng hợp dữ liệu tin tức tuần qua...
-                                </div>
-                                <div className="empty-state">
-                                    <p className="text-[#EAECEF] font-bold">Tính năng đang phát triển 🚀</p>
-                                    <p className="text-[#848E9C]">AI sẽ sớm cung cấp báo cáo tại đây.</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="ai-popup-input-area">
-                        <input type="text" placeholder="Hỏi AI điều gì đó..." disabled />
-                        <button disabled><MessageSquare size={16} /></button>
                     </div>
                 </div>
             )}
         </div>
+
         <div className="user-avatar"><User size={16} /></div>
       </div>
     </header>
