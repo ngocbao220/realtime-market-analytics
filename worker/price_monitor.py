@@ -8,7 +8,7 @@ import os
 # --- CONFIG ---
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 API_URL = os.getenv("API_URL", "http://34.124.203.62:8000")
-CHECK_INTERVAL = 60 
+CHECK_INTERVAL = 60 # Kiểm tra giá mỗi 60s
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("PriceMonitor")
@@ -19,17 +19,24 @@ except Exception as e:
     logger.error(f"Failed to connect to Redis: {e}")
 
 def monitor_loop():
-    logger.info("🚀 Starting Price Monitor (Rate Limit Fix)...")
-    watchlist = ["BTC", "ETH", "BNB", "SOL"]
+    logger.info("🚀 Starting Price Monitor (Top 5 Coins Strategy)...")
+    
+    # [CẬP NHẬT] Danh sách 5 đồng Coin cố định
+    watchlist = ["BTC", "ETH", "BNB", "SOL", "DOGE"]
+    
+    # Lưu thời điểm phân tích lần cuối
     last_analysis_time = {}
 
     while True:
         for symbol in watchlist:
             try:
-                # 1. Lấy giá
+                # 1. Lấy dữ liệu giá từ Redis (Do Producer đẩy vào)
                 ticker_key = f"ticker_1d:{symbol}USDT"
                 ticker_data = r.get(ticker_key)
-                if not ticker_data: continue
+                
+                if not ticker_data: 
+                    # logger.warning(f"No data for {symbol}, skipping...")
+                    continue
 
                 data = json.loads(ticker_data)
                 current_price = float(data.get('Close_price', 0))
@@ -37,30 +44,37 @@ def monitor_loop():
 
                 if open_price == 0: continue
 
-                # 2. Tính toán
+                # 2. Tính % biến động trong 24h
                 change_percent = ((current_price - open_price) / open_price) * 100
                 
-                # 3. Logic Trigger
+                # 3. Logic Trigger Phân tích AI
                 current_time = time.time()
                 last_time = last_analysis_time.get(symbol, 0)
                 should_analyze = False
                 trigger_reason = ""
 
-                # Biến động mạnh (>= 3%) -> 5 phút/lần
-                if abs(change_percent) >= 3.0:
-                    if current_time - last_time > 300: 
+                # [LOGIC MỚI] 
+                # TH1: Chưa phân tích bao giờ (Lần chạy đầu tiên) -> Chạy ngay
+                if last_time == 0:
+                    should_analyze = True
+                    trigger_reason = "🚀 INIT (First Run)"
+                
+                # TH2: Biến động mạnh (>= 3%) -> Cách nhau ít nhất 10 phút (600s)
+                elif abs(change_percent) >= 3.0:
+                    if current_time - last_time > 600: 
                         should_analyze = True
                         trend = "PUMP 🟢" if change_percent > 0 else "DUMP 🔴"
                         trigger_reason = f"🚨 ALERT {trend} (>3%)"
-                # Ổn định -> 15 phút/lần
+                
+                # TH3: Thị trường bình thường -> Cập nhật mỗi 30 phút (1800s) để giữ data luôn mới
                 else:
-                    if current_time - last_time > 900: 
+                    if current_time - last_time > 1800: 
                         should_analyze = True
-                        trigger_reason = "📉 SIDEWAY UPDATE (<3%)"
+                        trigger_reason = "📉 ROUTINE UPDATE (30m)"
 
-                # 4. Gọi API (Có Delay để tránh lỗi Rate Limit)
+                # 4. Gọi API AI
                 if should_analyze:
-                    logger.info(f"{trigger_reason}: {symbol} {change_percent:.2f}% | Sending to AI...")
+                    logger.info(f"{trigger_reason}: {symbol} {change_percent:.2f}% | Asking AI...")
                     
                     payload = {
                         "symbol": symbol,
@@ -69,18 +83,16 @@ def monitor_loop():
                     }
                     
                     try:
+                        # Gọi vào API nội bộ để phân tích và lưu vào Redis
                         response = requests.post(f"{API_URL}/narrative/analyze", json=payload, timeout=60)
                         
                         if response.status_code == 200:
                             analysis = response.json()
-                            logger.info(f"✅ AI Response: {analysis.get('summary')}")
+                            logger.info(f"✅ AI Done: {symbol}")
                             last_analysis_time[symbol] = current_time
                             
-                            # [QUAN TRỌNG] Nghỉ 10 giây sau mỗi lần gọi thành công 
-                            # để Gemini hồi phục quota, tránh lỗi cho đồng coin tiếp theo
-                            logger.info("⏳ Cooling down AI for 10s...")
-                            time.sleep(10) 
-                            
+                            # Nghỉ 5s để tránh spam API
+                            time.sleep(5) 
                         else:
                             logger.error(f"API Error ({response.status_code}): {response.text}")
                             
@@ -90,9 +102,10 @@ def monitor_loop():
             except Exception as e:
                 logger.error(f"Error checking {symbol}: {e}")
         
+        # Đợi 60s trước khi quét lại vòng mới
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
-    logger.info("⏳ Waiting 30s for Producer to warm up data...")
-    time.sleep(30)
+    logger.info("⏳ Waiting 20s for Redis/Producer...")
+    time.sleep(20)
     monitor_loop()
