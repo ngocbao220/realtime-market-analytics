@@ -4,7 +4,7 @@ import time
 import datetime
 from config.setting import REDIS_HOST, REDIS_PORT, SPEED, ORDERBOOK_DEPTH
 
-r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+
 
 # ==========================================
 # 1. HÀM GHI TRADES (Giao dịch khớp lệnh)
@@ -17,6 +17,7 @@ def write_trades_to_redis(batch_df, type="real"):
       - trade:latest:{symbol} -> Chi tiết lệnh vừa khớp (cho list recent trades)
     """
     def process_partition(iterator):
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
 
         last_exec_time = time.time()
@@ -62,6 +63,7 @@ def write_orderbook_to_redis(batch_df, type='real'):
     để so lệnh khớp thì nhớ lấy thằng cuối cùng của bids để so s
     """
     def process_partition(iterator):
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         
         for row in iterator:
@@ -170,6 +172,7 @@ def write_kline_to_redis(batch_df):
     Ghi dữ liệu Nến.
     """
     def process_partition(iterator):
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         last_exec_time = time.time()
         
@@ -206,6 +209,7 @@ def write_ticker_to_redis(batch_df):
     Key: ticker:{symbol}
     """
     def process_partition(iterator):
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
         pipe = r.pipeline()
         last_exec_time = time.time()
         
