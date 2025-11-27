@@ -163,11 +163,12 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
             <span className="td-item text-left text-green">{formatPrice(item.price)}</span>
             <span className="td-item text-right text-white opacity-90">{formatAmount(item.amount)}</span>
             <span className="td-item text-right text-white opacity-50">{formatTotal(item.total)}</span>
-          </div>
+          </div>   
         ))}
       </div>
     </div>
   );
 };
+
 
 export default OrderBook;
