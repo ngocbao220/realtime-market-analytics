@@ -30,11 +30,14 @@ def cancel_order(order_id: str, user_id: str):
     Hủy lệnh
     Endpoint: DELETE /orders/{order_id}?user_id=...
     """
-    # Cần logic lấy symbol/side từ order_id hoặc truyền thêm nếu service yêu cầu
-    # Ở đây giả sử service tự tra cứu được từ order_id
-    success = order_service.cancel_virtual_order(order_id) 
-    if not success:
-        raise HTTPException(status_code=404, detail="Order not found or cannot be cancelled")
+    # SỬA Ở ĐÂY: Truyền đủ user_id vào hàm service
+    success = order_service.cancel_virtual_order(user_id, order_id) 
+    
+    # Kiểm tra kết quả trả về từ service (Service trả về dict {"success": True/False...})
+    if not success or not success.get("success"):
+        msg = success.get("msg") if success else "Unknown error"
+        raise HTTPException(status_code=400, detail=msg)
+        
     return {"message": "Order cancelled successfully"}
 
 @router.get("/{user_id}")

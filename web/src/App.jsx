@@ -7,6 +7,8 @@ import User_Dashboard from './pages/User_Dashboard';
 import Admin_Dashboard from './pages/Admin_Dashboard'; 
 import Manage_user from './components/Manage_user'; // <--- Đã sửa từ components thành pages
 import HistoryTrades from './components/HistoryTrades';
+import { TickerProvider } from './contexts/TickerContext'; // Import mới
+
 // --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
 const PrivateRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -38,16 +40,20 @@ function App() {
         
         {/* Trang Login */}
         <Route path="/login" element={<Login />} />
+      {/* Đặt Provider ở đây để bao bọc toàn bộ App hoặc chỉ bao bọc Dashboard */}
+      <TickerProvider> 
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/login" element={<Login />} />
 
-        {/* Route cho User thường (Trading) */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <PrivateRoute>
-              <User_Dashboard onLogout={handleLogout} />
-            </PrivateRoute>
-          } 
-        />
+          <Route 
+            path="/dashboard" 
+            element={
+              <PrivateRoute>
+                <User_Dashboard onLogout={handleLogout} />
+              </PrivateRoute>
+            } 
+          />
 
         {/* Route cho Admin (Dashboard chính) */}
         <Route 
@@ -81,6 +87,18 @@ function App() {
         {/* Đường dẫn sai bất kỳ (404) -> Quay về Login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+          <Route 
+            path="/admin" 
+            element={
+              <AdminRoute>
+                <Admin_Dashboard />
+              </AdminRoute>
+            } 
+          />
+          
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      </TickerProvider>
     </BrowserRouter>
   );
 }

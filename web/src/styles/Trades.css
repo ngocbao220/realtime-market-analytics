@@ -9,7 +9,7 @@
   color: #848E9C;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #2B3139; /* Đường kẻ ngăn cách với Chart */
+  border-radius: 5px;
 }
 
 /* --- Header --- */

@@ -33,8 +33,22 @@ const Header = () => {
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (Array.isArray(data)) setTickers(data.slice(0, 4));
-      } catch (err) {}
+        if (Array.isArray(data)) {
+           setTickers(data);
+        }
+      } catch (err) {
+        console.error("Lỗi parse data ticker:", err);
+      }
+    };
+
+    ws.current.onerror = (error) => {
+      console.error("WebSocket Error:", error);
+    };
+
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
     };
     return () => ws.current && ws.current.close();
   }, []);

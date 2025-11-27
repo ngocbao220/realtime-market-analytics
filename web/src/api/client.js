@@ -113,6 +113,25 @@ class ExchangeAPI {
         return [false, "Lỗi khi xóa user"];
     }
 
+    /**
+     * API: GET /orders/history/{userId}
+     * Lấy lịch sử lệnh (Đã khớp/Đã hủy)
+     */
+
+    async getOrderHistory(userId) {
+        const data = await this._req("GET", `/orders/history/${userId}`);
+        return Array.isArray(data) ? data : [];
+    }
+
+    /**
+     * API: GET /trades/history/{userId}
+     * Lấy lịch sử khớp lệnh
+     */
+    async getTradeHistory(userId) {
+        const data = await this._req("GET", `/users/${userId}/trades/`);
+        return Array.isArray(data) ? data : [];
+    }
+
     // ==========================================
     // 2. MARKET DATA
     // ==========================================

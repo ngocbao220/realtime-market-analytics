@@ -1,83 +1,143 @@
-/* --- 1. RESET & BASE STYLES --- */
+/* =========================================
+   1. VARIABLES & SETUP
+   ========================================= */
+:root {
+  --bg-dark: #161A1E;
+  --bg-card: #1E2329;
+  --bg-header: #1E2329;
+  --border-color: #2B3139;
+  
+  /* Tính toán chiều cao các phần Header */
+  /* Header (64px) + SymbolInfo (60px) + Border (1px) = 125px */
+  --top-section-height: 125px; 
+}
+
+/* =========================================
+   2. GLOBAL RESET (QUAN TRỌNG)
+   ========================================= */
 * {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+  box-sizing: border-box; /* Đảm bảo padding không làm phình kích thước */
 }
 
+/* Set nền tối ngay từ gốc để không bao giờ lộ màn trắng */
 html, body, #root {
-  height: 100%; /* Quan trọng: Giúp app chiếm toàn bộ chiều cao màn hình */
   width: 100%;
-  overflow: hidden; /* Ngăn trang web bị cuộn (chỉ cuộn nội dung bên trong) */
+  height: 100%;
+  background-color: var(--bg-dark); /* Fix lỗi lộ màn trắng */
+  color: #EAECEF;
+  overflow: hidden; /* Chặn thanh cuộn mặc định của trình duyệt */
+  font-family: 'Binance Plex', -apple-system, sans-serif;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* =========================================
+   3. APP LAYOUT STRUCTURE
+   ========================================= */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;  /* Dùng 100% thay vì 100vw để tránh trừ thanh cuộn */
+  height: 100vh;
+  background-color: var(--bg-dark);
+}
+
+/* Nhóm Header cố định */
+.fixed-header-group {
+  flex: 0 0 auto;
+  z-index: 100;
+  width: 100%;
+}
+
+/* Container cuộn chính */
+.scrollable-content {
+  flex: 1; 
+  width: 100%;
   
-  background-color: #161a1e; /* Màu nền chính (Dark theme) */
-  color: #EAECEF; /* Màu chữ chính */
+  /* Xử lý cuộn */
+  overflow-y: auto;   /* Cho phép cuộn dọc */
+  overflow-x: hidden; /* CẤM cuộn ngang (Fix lỗi lệch màn hình) */
+  
+  /* Đẩy scrollbar sang sát mép phải */
+  position: relative; 
 }
 
-/* --- 2. CUSTOM SCROLLBAR (Thanh cuộn đẹp cho Dark Mode) --- */
-/* Áp dụng cho Webkit browsers (Chrome, Safari, Edge) */
+/* =========================================
+   4. TRADING SCREEN (PHẦN TRÊN)
+   ========================================= */
+.main-content-grid {
+  display: grid;
+  width: 100%; /* Đảm bảo grid không vượt quá khung */
+  
+  /* Chiều cao tính toán chính xác để vừa khít màn hình */
+  height: calc(100vh - var(--top-section-height));
+  min-height: 600px; 
+  
+  /* Layout 3 cột */
+  grid-template-columns: 320px 1fr 320px; 
+  
+  gap: 1px;
+  background-color: var(--bg-dark);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* --- Các Cột --- */
+.col-left, .col-right {
+  background-color: var(--bg-card);
+  overflow-y: auto; 
+  padding: 0; /* Reset padding để tránh lỗi layout */
+  display: flex;
+  flex-direction: column;
+}
+
+.col-center {
+  background-color: var(--bg-dark);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  min-width: 0; /* Fix lỗi flex item không co lại được trong Grid */
+}
+
+/* --- Chi tiết bên trong cột giữa --- */
+.chart-container {
+  flex: 1; 
+  background-color: var(--bg-card);
+  position: relative;
+  width: 100%; /* Đảm bảo chart không bị tràn */
+}
+
+.trade-form-container {
+  flex: 0 0 auto;
+  background-color: var(--bg-card);
+  width: 100%;
+}
+
+/* =========================================
+   5. HISTORY SECTION (PHẦN DƯỚI)
+   ========================================= */
+.user-history-section {
+  width: 100%;
+  min-height: 400px; /* Tăng chiều cao lên chút cho dễ nhìn */
+  background-color: var(--bg-card);
+  padding-bottom: 50px;
+}
+
+/* =========================================
+   6. SCROLLBAR & UTILITIES
+   ========================================= */
+/* Custom Scrollbar cho Webkit (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #161a1e; 
+  background: transparent; 
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #2B3139; 
+  background: #474D57; 
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #474D57; 
-}
-
-/* --- 3. APP LAYOUT CLASSES (Bố cục chia cột) --- */
-
-/* Container bao quanh toàn bộ App */
-.app-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100vh; /* Chiếm 100% chiều cao view port */
-}
-
-/* Phần nội dung chính bên dưới Header (Chia 3 cột) */
-.main-content-grid {
-  display: flex;
-  flex: 1; /* Chiếm toàn bộ khoảng trống còn lại sau khi trừ Header */
-  overflow: hidden; /* Cắt bỏ phần thừa */
-  border-top: 1px solid #2B3139; /* Đường kẻ ngăn cách với SymbolInfo */
-}
-
-/* Cột Trái (Order Book) & Phải (Trades) */
-.layout-col-fixed {
-  width: 320px; /* Độ rộng cố định */
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0; /* Không bị co lại khi màn hình nhỏ */
-}
-
-.border-right { border-right: 1px solid #2B3139; }
-.border-left { border-left: 1px solid #2B3139; }
-
-/* Cột Giữa (Biểu đồ) */
-.layout-col-fluid {
-  flex: 1; /* Tự động giãn ra chiếm hết khoảng trống ở giữa */
-  height: 100%;
-  position: relative;
-  background-color: #161a1e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #848E9C; 
 }

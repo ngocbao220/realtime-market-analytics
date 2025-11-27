@@ -1,18 +1,44 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/OrderBook.css';
 import { MoreHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
-import { api } from '../api/client'; // Import API client
+import { api } from '../api/client';
+import { useSymbolTicker } from '../contexts/TickerContext'; // Import Hook từ Context
 
 const OrderBook = ({ symbol = "BTCUSDT" }) => {
   const [bids, setBids] = useState([]);
   const [asks, setAsks] = useState([]);
-  const [tickerPrice, setTickerPrice] = useState(0);
+  
+  // 1. Lấy dữ liệu Ticker từ Context (Đã xóa WS Ticker riêng ở đây)
+  const tickerData = useSymbolTicker(symbol);
+  
+  // Các state hiển thị local
   const [priceTrend, setPriceTrend] = useState('equal');
-
-  const wsRef = useRef(null);
   const lastPriceRef = useRef(0);
+  const orderbookWsRef = useRef(null);
 
-  // --- HÀM XỬ LÝ DATA ---
+  // 2. Theo dõi thay đổi giá từ Context để xác định Trend (Up/Down)
+  useEffect(() => {
+    if (tickerData) {
+        const newPrice = parseFloat(tickerData.price);
+        const oldPrice = lastPriceRef.current;
+
+        if (oldPrice > 0) {
+            if (newPrice > oldPrice) setPriceTrend('up');
+            else if (newPrice < oldPrice) setPriceTrend('down');
+            else setPriceTrend('equal');
+        }
+        
+        lastPriceRef.current = newPrice;
+    }
+  }, [tickerData]);
+
+  // Các biến hiển thị derived từ Context
+  const tickerPrice = tickerData ? parseFloat(tickerData.price) : 0;
+  const priceChange = tickerData ? parseFloat(tickerData.change) : 0;
+  const isPositiveChange = priceChange >= 0;
+  const trendColor = priceTrend === 'down' ? 'text-red' : 'text-green';
+
+  // --- HÀM XỬ LÝ DATA ORDERBOOK ---
   const processOrderBookData = (data) => {
     if (!Array.isArray(data)) return [];
     
@@ -36,16 +62,16 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
     }));
   };
 
+  // --- WEBSOCKET CHO ORDERBOOK (Giữ nguyên vì đây là data riêng biệt) ---
   useEffect(() => {
-    // Cập nhật dùng api.getWebSocketUrl
     const endpoint = `/market/ws/orderbook/${symbol}?type=real&side=both`;
     const socketUrl = api.getWebSocketUrl(endpoint);
     
     const ws = new WebSocket(socketUrl);
-    wsRef.current = ws;
+    orderbookWsRef.current = ws;
 
     ws.onopen = () => {
-        console.log(`✅ Connected to Orderbook WS: ${symbol}`);
+        // console.log(`✅ Connected to Orderbook WS: ${symbol}`);
     };
 
     ws.onmessage = (event) => {
@@ -53,39 +79,18 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
             const data = JSON.parse(event.data);
             
             if (data) {
-                const newAsks = processOrderBookData(data.asks || []).reverse();
-                const newBids = processOrderBookData(data.bids || []);
-
+                const newAsks = processOrderBookData(data.asks || []).slice(0, 15).reverse();
+                const newBids = processOrderBookData(data.bids || []).slice(0, 15);
                 setAsks(newAsks);
                 setBids(newBids);
-
-                if (newAsks.length > 0 && newBids.length > 0) {
-                    const bestAsk = newAsks[newAsks.length - 1].price;
-                    const bestBid = newBids[0].price;                  
-                    
-                    const estimatedPrice = (bestAsk + bestBid) / 2;
-                    
-                    const oldPrice = lastPriceRef.current;
-                    if (oldPrice > 0) {
-                        if (estimatedPrice > oldPrice) setPriceTrend('up');
-                        else if (estimatedPrice < oldPrice) setPriceTrend('down');
-                    }
-                    
-                    lastPriceRef.current = estimatedPrice;
-                    setTickerPrice(estimatedPrice);
-                }
             }
         } catch (err) {
-            console.error("Error parsing WS message:", err);
+            console.error("Error parsing Orderbook WS message:", err);
         }
     };
 
-    ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
-    };
-
     return () => {
-        if (wsRef.current) wsRef.current.close();
+        if (orderbookWsRef.current) orderbookWsRef.current.close();
     };
   }, [symbol]);
 
@@ -105,8 +110,6 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
     if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
     return num.toFixed(2);
   };
-
-  const trendColor = priceTrend === 'down' ? 'text-red' : 'text-green';
 
   return (
     <div className="orderbook-container">
@@ -140,6 +143,7 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
         ))}
       </div>
 
+      {/* --- PHẦN TICKER GIỮA ORDERBOOK (Dùng data từ Context) --- */}
       <div className="ob-ticker">
          <span className={`ticker-price-large ${trendColor}`}>
             {formatPrice(tickerPrice)} 
@@ -152,6 +156,10 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
          )}
          
          <span className="ticker-mark">${formatPrice(tickerPrice)}</span>
+         
+         <span className={`ticker-change ${isPositiveChange ? 'text-green' : 'text-red'}`}>
+            {isPositiveChange ? '+' : ''}{priceChange.toFixed(2)}%
+         </span>
       </div>
 
       <div className="ob-list flex-1">

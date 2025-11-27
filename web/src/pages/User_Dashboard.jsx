@@ -1,43 +1,66 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Header from '../components/Header';
 import SymbolInfo from '../components/SymbolInfo';
 import OrderBook from '../components/Orderbook';
 import Trades from '../components/Trades';
 import TradingChart from '../components/TradingChart';
-
+import TradeForm from '../components/TradeForm';
+import UserHistory from '../components/UserHistory';
 import '../styles/User_Dashboard.css';
 
 function User_Dashboard() {
+  const [currentSymbol, setCurrentSymbol] = useState("BTCUSDT");
+
+  const handleSymbolChange = (newSymbol) => {
+    setCurrentSymbol(newSymbol);
+  };
+
   return (
-    // .app-layout: Flex column, cao 100vh (đã định nghĩa trong index.css)
     <div className="app-layout">
       
-      {/* 1. Phần Đầu (Header + Info) - Chiều cao tự động */}
-      <header>
+      {/* 1. Khu vực Header Cố định (Không cuộn cùng nội dung dưới) */}
+      <div className="fixed-header-group">
         <Header />
-        <SymbolInfo />
-      </header>
+        <SymbolInfo 
+            symbol={currentSymbol} 
+            onSymbolChange={handleSymbolChange} 
+        />
+      </div>
 
-      {/* 2. Phần Thân (3 Cột) - Flex 1 để chiếm hết chiều cao còn lại */}
-      <main className="main-content-grid">
+      {/* 2. Khu vực Nội dung (Có thể cuộn) */}
+      <div className="scrollable-content">
         
-        {/* Cột Trái: OrderBook */}
-        <aside className="layout-col-fixed border-right">
-           <OrderBook symbol="BTCUSDT" />
-        </aside>
+        {/* Phần Trading: Chiếm trọn 1 màn hình còn lại */}
+        <main className="main-content-grid">
+          
+          {/* Cột Trái */}
+          <aside className="col-left">
+              <OrderBook symbol={currentSymbol} />
+          </aside>
 
-        {/* Cột Giữa: Chart TradingView */}
-        <section className="layout-col-fluid">
-            {/* 2. Nhúng TradingChart vào đây */}
-            <TradingChart symbol="BTCUSDT" />
-        </section>
-        
-        {/* Cột Phải: Market Trades */}
-        <aside className="layout-col-fixed border-left">
-           <Trades symbol="BTCUSDT" />
-        </aside>
+          {/* Cột Giữa */}
+          <section className="col-center">
+              <div className="chart-container">
+                  <TradingChart symbol={currentSymbol} />
+              </div>
+              <div className="trade-form-container">
+                  <TradeForm symbol={currentSymbol} />
+              </div>
+          </section>
+          
+          {/* Cột Phải */}
+          <aside className="col-right">
+              <Trades symbol={currentSymbol} />
+          </aside>
 
-      </main>
+        </main>
+
+        {/* Phần History: Nằm bên dưới, phải cuộn mới thấy */}
+        <div className="user-history-section">
+          <UserHistory symbol={currentSymbol} />
+        </div>
+
+      </div>
     </div>
   );
 }
