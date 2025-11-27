@@ -244,7 +244,7 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
       <div className="chart-toolbar">
         <div className="toolbar-group">
             <span className="text-xs text-gray-500 mr-2 self-center font-bold">Time</span>
-            {['1m', '15m', '1h', '4h', '1d'].map(t => (
+            {['1m'].map(t => (
                 <button 
                     key={t}
                     className={`time-btn ${interval === t ? 'active' : ''}`}

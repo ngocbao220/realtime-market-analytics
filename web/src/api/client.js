@@ -2,14 +2,16 @@ import axios from 'axios';
 
 // --- CẤU HÌNH ---
 // Trong Vite dùng import.meta.env, trong Create-React-App dùng process.env
-const API_BASE_URL = "http://localhost:8000" || import.meta.env.VITE_API_URL;
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+console.log("Current API URL:", BASE_URL);
 
 class ExchangeAPI {
     /**
      * Client chuyên dụng để gọi API sàn giao dịch.
      * Sử dụng Axios Instance để tái sử dụng kết nối.
      */
-    constructor(baseURL = API_BASE_URL) {
+    constructor(baseURL = BASE_URL) {
         this.baseURL = baseURL;
         this.client = axios.create({
             baseURL: this.baseURL,
