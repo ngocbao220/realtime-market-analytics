@@ -9,15 +9,15 @@
   position: relative;
 }
 
-/* --- Toolbar (Timeframe + Chart Type) --- */
 .chart-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
   border-bottom: 1px solid #2B3139;
-  height: 48px;
+  height: 48px; /* Cố định chiều cao toolbar */
   background-color: #161a1e;
+  flex-shrink: 0;
 }
 
 .toolbar-group {
@@ -43,19 +43,35 @@
 }
 
 .time-btn.active, .type-btn.active {
-  color: #F0B90B; /* Màu vàng Binance */
+  color: #F0B90B;
   font-weight: bold;
 }
 
-/* --- Khu vực vẽ biểu đồ --- */
-.chart-container {
-  flex: 1; /* Chiếm toàn bộ phần còn lại */
+/* --- Container chứa cả 2 biểu đồ --- */
+.charts-split-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  height: calc(100% - 48px); /* Trừ đi toolbar */
   position: relative;
-  overflow: hidden;
 }
 
-/* Loading state */
+/* Biểu đồ giá (Trên) */
+.price-chart-container {
+  width: 100%;
+  height: 75%; /* Chiếm 75% chiều cao */
+  position: relative;
+}
+
+/* Biểu đồ Volume (Dưới) */
+.volume-chart-container {
+  width: 100%;
+  height: 25%; /* Chiếm 25% chiều cao */
+  border-top: 1px solid #2B3139; /* Đường kẻ ngăn cách rõ ràng */
+  position: relative;
+}
+
 .chart-loading {
   position: absolute;
   top: 50%;
@@ -63,4 +79,5 @@
   transform: translate(-50%, -50%);
   color: #848E9C;
   font-size: 14px;
+  z-index: 10;
 }

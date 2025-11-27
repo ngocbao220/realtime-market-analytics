@@ -1,6 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from services import ticker_service
 import asyncio
+from config import SPEED_WEBSOCKET
 
 router = APIRouter(tags=["Tickers"])
 
@@ -16,6 +17,6 @@ async def websocket_tickers(websocket: WebSocket):
             # lấy dữ liệu ticker mới nhất từ Redis
             tickers = ticker_service.get_tickers()
             await websocket.send_json(tickers)
-            await asyncio.sleep(1)  # Gửi dữ liệu mỗi giây
+            await asyncio.sleep(SPEED_WEBSOCKET)  # Gửi dữ liệu mỗi giây
     except WebSocketDisconnect:
         print("Client disconnected from tickers")

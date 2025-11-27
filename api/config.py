@@ -23,3 +23,4 @@ INTERVAL_MAP = {
 
 # Tốc độ làm mới bảng
 SPEED = 1
+SPEED_WEBSOCKET = 1

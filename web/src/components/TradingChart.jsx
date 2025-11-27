@@ -11,15 +11,21 @@ import {
 import '../styles/TradingChart.css';
 
 const TradingChart = ({ symbol = "BTCUSDT" }) => {
-  const chartContainerRef = useRef(null);
-  const chartInstance = useRef(null);
+  // Ref cho 2 container riêng biệt
+  const priceChartContainerRef = useRef(null);
+  const volumeChartContainerRef = useRef(null);
   
-  // Refs
+  // Refs giữ instance chart
+  const priceChartRef = useRef(null);
+  const volumeChartRef = useRef(null);
+
+  // Refs Series
   const candleSeriesRef = useRef(null);
   const lineSeriesRef = useRef(null); 
   const volumeSeriesRef = useRef(null);
   const ma7SeriesRef = useRef(null);
   const ma25SeriesRef = useRef(null);
+  
   const wsRef = useRef(null);
 
   // State
@@ -38,156 +44,162 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     return avg.filter(d => d.value !== undefined);
   };
 
-  // --- 1. KHỞI TẠO CHART ---
+  // --- INIT CHARTS ---
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!priceChartContainerRef.current || !volumeChartContainerRef.current) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: '#161a1e' },
-        textColor: '#848E9C',
-        fontFamily: "'Roboto', sans-serif",
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: '#2B3139', style: 1, visible: false },
-        horzLines: { color: '#2B3139', style: 1, visible: true },
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
-      
-      // Localization (Giữ nguyên)
-      localization: {
-        locale: 'en-GB',
-        timeFormatter: (timestamp) => {
-            const date = new Date(timestamp * 1000);
-            const options = { 
-                timeZone: 'Asia/Ho_Chi_Minh',
-                hour12: false,
-                hour: '2-digit', minute: '2-digit',
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            };
-            if (interval === '1d' || interval === '1w') {
-                 return new Intl.DateTimeFormat('en-GB', { ...options, hour: undefined, minute: undefined }).format(date);
+    // --- CẤU HÌNH CHUNG ---
+    const chartOptions = {
+        layout: {
+            background: { type: ColorType.Solid, color: '#161a1e' },
+            textColor: '#848E9C',
+            fontFamily: "'Roboto', sans-serif",
+            fontSize: 11,
+        },
+        grid: {
+            vertLines: { color: '#2B3139', style: 1, visible: false },
+            horzLines: { color: '#2B3139', style: 1, visible: true },
+        },
+        
+        // --- FIX LỖI THẲNG HÀNG TẠI ĐÂY ---
+        rightPriceScale: {
+            borderColor: '#2B3139',
+            visible: true,
+            // Ép độ rộng trục phải cố định là 70px cho cả 2 biểu đồ
+            minimumWidth: 70, 
+        },
+        // ------------------------------------
+
+        timeScale: {
+            timeVisible: true,
+            secondsVisible: false,
+            borderColor: '#2B3139',
+            rightOffset: 5,
+            barSpacing: 12,
+            tickMarkFormatter: (time, tickMarkType, locale) => {
+                const date = new Date(time * 1000);
+                const options = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
+                if (interval === '1d' || interval === '1w') {
+                    return new Intl.DateTimeFormat('en-GB', { ...options, day: '2-digit', month: '2-digit' }).format(date);
+                }
+                return new Intl.DateTimeFormat('en-GB', { ...options, hour: '2-digit', minute: '2-digit' }).format(date);
+            },
+        },
+        // ... (Giữ nguyên localization và crosshair)
+        localization: {
+            locale: 'en-GB',
+            timeFormatter: (timestamp) => {
+                const date = new Date(timestamp * 1000);
+                const options = { 
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    hour12: false,
+                    hour: '2-digit', minute: '2-digit',
+                    day: '2-digit', month: '2-digit', year: 'numeric'
+                };
+                if (interval === '1d' || interval === '1w') {
+                     return new Intl.DateTimeFormat('en-GB', { ...options, hour: undefined, minute: undefined }).format(date);
+                }
+                return new Intl.DateTimeFormat('en-GB', options).format(date);
             }
-            return new Intl.DateTimeFormat('en-GB', options).format(date);
+        },
+        crosshair: {
+            mode: CrosshairMode.Normal,
+            vertLine: { labelBackgroundColor: '#404040' },
+            horzLine: { labelBackgroundColor: '#404040' },
+        },
+    };
+
+    // 1. TẠO PRICE CHART (KHUNG TRÊN)
+    const priceChart = createChart(priceChartContainerRef.current, {
+        ...chartOptions,
+        width: priceChartContainerRef.current.clientWidth,
+        height: priceChartContainerRef.current.clientHeight,
+        timeScale: {
+            ...chartOptions.timeScale,
+            visible: false, // Ẩn trục thời gian của chart trên để đỡ bị lặp
         }
-      },
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-        borderColor: '#2B3139',
-        rightOffset: 5,
-        barSpacing: 12,
-        tickMarkFormatter: (time, tickMarkType, locale) => {
-            const date = new Date(time * 1000);
-            const options = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
-            if (interval === '1d' || interval === '1w') {
-                return new Intl.DateTimeFormat('en-GB', { ...options, day: '2-digit', month: '2-digit' }).format(date);
-            }
-            return new Intl.DateTimeFormat('en-GB', { ...options, hour: '2-digit', minute: '2-digit' }).format(date);
-        },
-      },
-      
-      // --- CẤU HÌNH TRỤC PHẢI (RIGHT) - Dành riêng cho NẾN ---
-      rightPriceScale: {
-        visible: true,
-        borderColor: '#2B3139',
-        scaleMargins: {
-            top: 0.1,    
-            bottom: 0.25, // Chừa đáy cho Volume
-        },
-      },
-
-      // --- CẤU HÌNH TRỤC TRÁI (LEFT) - Dành riêng cho VOLUME ---
-      leftPriceScale: {
-        visible: true, // Bật trục trái lên để xem số lượng Volume
-        borderColor: '#2B3139',
-        scaleMargins: {
-            top: 0.8, // Đẩy volume xuống đáy
-            bottom: 0,
-        },
-      },
-
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { labelBackgroundColor: '#404040' },
-        horzLine: { labelBackgroundColor: '#404040' },
-      },
     });
 
-    // --- 1. VOLUME (GẮN VÀO TRỤC TRÁI) ---
-    const volumeSeries = chart.addSeries(HistogramSeries, {
+    // 2. TẠO VOLUME CHART (KHUNG DƯỚI)
+    const volumeChart = createChart(volumeChartContainerRef.current, {
+        ...chartOptions,
+        width: volumeChartContainerRef.current.clientWidth,
+        height: volumeChartContainerRef.current.clientHeight,
+        grid: { ...chartOptions.grid, horzLines: { visible: false } } // Ẩn lưới ngang volume cho thoáng
+    });
+
+    // --- SETUP SERIES ---
+
+    // A. Series cho Price Chart
+    const candleSeries = priceChart.addSeries(CandlestickSeries, {
+        upColor: '#0ECB81', downColor: '#F6465D',
+        borderVisible: false, wickUpColor: '#0ECB81', wickDownColor: '#F6465D',
+    });
+    const lineSeries = priceChart.addSeries(AreaSeries, {
+        lineColor: '#F0B90B', topColor: 'rgba(240, 185, 11, 0.4)',
+        bottomColor: 'rgba(240, 185, 11, 0.0)', lineWidth: 2, visible: false,
+    });
+    const ma7 = priceChart.addSeries(LineSeries, { color: '#F0B90B', lineWidth: 2, crosshairMarkerVisible: false });
+    const ma25 = priceChart.addSeries(LineSeries, { color: '#E056FD', lineWidth: 2, crosshairMarkerVisible: false });
+
+    // B. Series cho Volume Chart
+    const volumeSeries = volumeChart.addSeries(HistogramSeries, {
         color: '#26a69a',
         priceFormat: { type: 'volume' },
-        priceScaleId: 'left', // <--- QUAN TRỌNG NHẤT: Ép volume dùng trục trái
     });
+
+    // Lưu Refs
+    priceChartRef.current = priceChart;
+    volumeChartRef.current = volumeChart;
+    candleSeriesRef.current = candleSeries;
+    lineSeriesRef.current = lineSeries;
+    ma7SeriesRef.current = ma7;
+    ma25SeriesRef.current = ma25;
     volumeSeriesRef.current = volumeSeries;
 
-    // --- 2. MA LINES (GẮN VÀO TRỤC PHẢI) ---
-    const ma7 = chart.addSeries(LineSeries, { 
-        color: '#F0B90B', lineWidth: 2, crosshairMarkerVisible: false, 
-        priceScaleId: 'right' 
-    });
-    ma7SeriesRef.current = ma7;
-    
-    const ma25 = chart.addSeries(LineSeries, { 
-        color: '#E056FD', lineWidth: 2, crosshairMarkerVisible: false, 
-        priceScaleId: 'right' 
-    });
-    ma25SeriesRef.current = ma25;
-
-    // --- 3. NẾN (GẮN VÀO TRỤC PHẢI) ---
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-        upColor: '#0ECB81',
-        downColor: '#F6465D',
-        borderVisible: false,
-        wickUpColor: '#0ECB81',
-        wickDownColor: '#F6465D',
-        priceScaleId: 'right', // Gắn vào trục phải
-    });
-    candleSeriesRef.current = candleSeries;
-
-    // --- 4. LINE CHART (GẮN VÀO TRỤC PHẢI) ---
-    const lineSeries = chart.addSeries(AreaSeries, {
-        lineColor: '#F0B90B',
-        topColor: 'rgba(240, 185, 11, 0.4)',
-        bottomColor: 'rgba(240, 185, 11, 0.0)',
-        lineWidth: 2,
-        visible: false,
-        priceScaleId: 'right',
-    });
-    lineSeriesRef.current = lineSeries;
-
-    chartInstance.current = chart;
-
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        chart.applyOptions({ 
-            width: chartContainerRef.current.clientWidth,
-            height: chartContainerRef.current.clientHeight 
+    // --- ĐỒNG BỘ HÓA (SYNC) 2 BIỂU ĐỒ ---
+    // Khi cuộn chart này, chart kia cuộn theo
+    const syncCharts = (source, target) => {
+        source.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+            if (range) {
+                target.timeScale().setVisibleLogicalRange(range);
+            }
         });
-      }
+    };
+    
+    syncCharts(priceChart, volumeChart);
+    syncCharts(volumeChart, priceChart);
+
+    // --- RESIZE HANDLER ---
+    const handleResize = () => {
+        if (priceChartContainerRef.current && volumeChartContainerRef.current) {
+            priceChart.applyOptions({ 
+                width: priceChartContainerRef.current.clientWidth,
+                height: priceChartContainerRef.current.clientHeight 
+            });
+            volumeChart.applyOptions({ 
+                width: volumeChartContainerRef.current.clientWidth,
+                height: volumeChartContainerRef.current.clientHeight 
+            });
+        }
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
+        window.removeEventListener('resize', handleResize);
+        priceChart.remove();
+        volumeChart.remove();
     };
-  }, [interval]); 
+  }, [interval]);
 
   // --- SWITCH TYPE ---
   useEffect(() => {
     if (!candleSeriesRef.current || !lineSeriesRef.current) return;
     const isCandle = chartType === 'candle'; 
-
     candleSeriesRef.current.applyOptions({ visible: isCandle });
     lineSeriesRef.current.applyOptions({ visible: !isCandle });
-    
     if(ma7SeriesRef.current) ma7SeriesRef.current.applyOptions({ visible: isCandle });
     if(ma25SeriesRef.current) ma25SeriesRef.current.applyOptions({ visible: isCandle });
-
   }, [chartType]);
 
   // --- WEBSOCKET DATA ---
@@ -202,7 +214,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
     ws.onmessage = (event) => {
         try {
             const rawData = JSON.parse(event.data);
-            
             if (Array.isArray(rawData) && rawData.length > 0) {
                 const candleData = rawData.map(d => {
                     let rawTime = d.timestamp || d[0]; 
@@ -224,9 +235,15 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
                     };
                 }).sort((a, b) => a.time - b.time); 
                 
+                // Update Price Chart
                 if (candleSeriesRef.current) candleSeriesRef.current.setData(candleData);
                 if (lineSeriesRef.current) lineSeriesRef.current.setData(candleData.map(d => ({ time: d.time, value: d.close })));
+                if (chartType === 'candle') {
+                    if (ma7SeriesRef.current) ma7SeriesRef.current.setData(calculateSMA(candleData, 7));
+                    if (ma25SeriesRef.current) ma25SeriesRef.current.setData(calculateSMA(candleData, 25));
+                }
 
+                // Update Volume Chart (Riêng biệt)
                 if (volumeSeriesRef.current) {
                     volumeSeriesRef.current.setData(candleData.map(d => ({
                         time: d.time,
@@ -235,10 +252,6 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
                     })));
                 }
 
-                if (chartType === 'candle') {
-                    if (ma7SeriesRef.current) ma7SeriesRef.current.setData(calculateSMA(candleData, 7));
-                    if (ma25SeriesRef.current) ma25SeriesRef.current.setData(calculateSMA(candleData, 25));
-                }
                 setIsLoading(false);
             }
         } catch (err) {
@@ -265,31 +278,27 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
             ))}
         </div>
         <div className="toolbar-group">
-             <button 
-                className={`type-btn ${chartType === 'candle' ? 'active' : ''}`}
-                onClick={() => setChartType('candle')}
-             >
-                Candles
-             </button>
-             <button 
-                className={`type-btn ${chartType === 'line' ? 'active' : ''}`}
-                onClick={() => setChartType('line')}
-             >
-                Line
-             </button>
+             <button className={`type-btn ${chartType === 'candle' ? 'active' : ''}`} onClick={() => setChartType('candle')}>Candles</button>
+             <button className={`type-btn ${chartType === 'line' ? 'active' : ''}`} onClick={() => setChartType('line')}>Line</button>
         </div>
       </div>
 
-      <div className="chart-container" ref={chartContainerRef}>
-          {isLoading && (
-              <div className="chart-loading"><span className="animate-pulse">Loading Chart...</span></div>
-          )}
-          {!isLoading && chartType === 'candle' && (
-             <div className="absolute top-2 left-2 text-[10px] z-10 font-mono pointer-events-none">
-                <span className="text-[#F0B90B] mr-2">MA(7)</span>
-                <span className="text-[#E056FD]">MA(25)</span>
-             </div>
-          )}
+      {/* CONTAINER CHIA ĐÔI */}
+      <div className="charts-split-container">
+          {isLoading && <div className="chart-loading"><span className="animate-pulse">Loading Chart...</span></div>}
+          
+          {/* Biểu đồ trên: GIÁ */}
+          <div className="price-chart-container" ref={priceChartContainerRef}>
+             {!isLoading && chartType === 'candle' && (
+                 <div className="absolute top-2 left-2 text-[10px] z-10 font-mono pointer-events-none">
+                    <span className="text-[#F0B90B] mr-2">MA(7)</span>
+                    <span className="text-[#E056FD]">MA(25)</span>
+                 </div>
+             )}
+          </div>
+
+          {/* Biểu đồ dưới: VOLUME */}
+          <div className="volume-chart-container" ref={volumeChartContainerRef}></div>
       </div>
     </div>
   );
