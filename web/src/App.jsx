@@ -1,10 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Import các trang (Đảm bảo đường dẫn đúng với cấu trúc thư mục của bạn)
+// Import các trang (Lưu ý: Sửa lại đường dẫn Manage_user cho đúng thư mục pages)
 import Login from './pages/Login'; 
 import User_Dashboard from './pages/User_Dashboard'; 
 import Admin_Dashboard from './pages/Admin_Dashboard'; 
+import Manage_user from './components/Manage_user'; // <--- Đã sửa từ components thành pages
+import HistoryTrades from './components/HistoryTrades';
 import { TickerProvider } from './contexts/TickerContext'; // Import mới
 
 // --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
@@ -32,6 +34,12 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Routes>
+        {/* 1. MẶC ĐỊNH VÀO LOGIN (Khi truy cập trang chủ /) */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        
+        {/* Trang Login */}
+        <Route path="/login" element={<Login />} />
       {/* Đặt Provider ở đây để bao bọc toàn bộ App hoặc chỉ bao bọc Dashboard */}
       <TickerProvider> 
         <Routes>
@@ -47,6 +55,38 @@ function App() {
             } 
           />
 
+        {/* Route cho Admin (Dashboard chính) */}
+        <Route 
+          path="/admin" 
+          element={
+            <AdminRoute>
+              <Admin_Dashboard />
+            </AdminRoute>
+          } 
+        />
+
+        {/* Route Quản lý User (Chỉ Admin) */}
+        <Route 
+          path="/manage-users" 
+          element={
+            <AdminRoute>
+               <Manage_user />
+            </AdminRoute>
+          } 
+        />
+        {/* Route Lịch sử Giao dịch (Admin) */}
+        <Route 
+          path="/history-trades" 
+          element={
+            <AdminRoute>
+               <HistoryTrades />
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Đường dẫn sai bất kỳ (404) -> Quay về Login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
           <Route 
             path="/admin" 
             element={

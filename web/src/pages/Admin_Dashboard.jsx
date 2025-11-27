@@ -1,69 +1,45 @@
-import React, { useEffect, useState } from "react";
-import { api } from "../api/client";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import Header from '../components/Header';
+import SymbolInfo from '../components/SymbolInfo';
+import OrderBook from '../components/Orderbook';
+import Trades from '../components/Trades';
+import TradingChart from '../components/TradingChart';
 
-export default function Admin_Dashboard() {
-  const [users, setUsers] = useState([]);
-  const navigate = useNavigate();
+import '../styles/User_Dashboard.css';
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    const list = await api.getAllUsers();
-    setUsers(list);
-  };
-
-  const handleDelete = async (userId) => {
-    if (window.confirm("Bạn chắc chắn muốn xóa user này?")) {
-      const [success, msg] = await api.deleteUser(userId);
-      if (success) {
-        alert("Đã xóa thành công!");
-        loadUsers(); // Refresh lại list
-      } else {
-        alert("Lỗi: " + msg);
-      }
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
+function Admin_Dashboard() {
   return (
-    <div style={{ padding: 20, color: "#fff", background: "#161a1e", minHeight: "100vh" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-        <h1>Admin Dashboard - Quản lý người dùng</h1>
-        <button onClick={handleLogout} style={{ padding: "5px 15px", cursor: "pointer", background: "#2B3139", color: "white", border: "none" }}>Đăng xuất</button>
-      </div>
+    // .app-layout: Flex column, cao 100vh (đã định nghĩa trong index.css)
+    <div className="app-layout">
+      
+      {/* 1. Phần Đầu (Header + Info) - Chiều cao tự động */}
+      <header>
+        <Header />
+        <SymbolInfo />
+      </header>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #333" }}>
-        <thead>
-          <tr style={{ background: "#2B3139" }}>
-            <th style={{ padding: 10, textAlign: "left" }}>ID</th>
-            <th style={{ padding: 10, textAlign: "left" }}>Username</th>
-            <th style={{ padding: 10, textAlign: "center" }}>Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.user_id} style={{ borderBottom: "1px solid #333" }}>
-              <td style={{ padding: 10 }}>{u.user_id}</td>
-              <td style={{ padding: 10 }}>{u.username}</td>
-              <td style={{ padding: 10, textAlign: "center" }}>
-                <button 
-                  onClick={() => handleDelete(u.user_id)}
-                  style={{ background: "#F6465D", color: "white", border: "none", padding: "5px 10px", cursor: "pointer", borderRadius: 4 }}
-                >
-                  Xóa
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* 2. Phần Thân (3 Cột) - Flex 1 để chiếm hết chiều cao còn lại */}
+      <main className="main-content-grid">
+        
+        {/* Cột Trái: OrderBook */}
+        <aside className="layout-col-fixed border-right">
+           <OrderBook symbol="BTCUSDT" />
+        </aside>
+
+        {/* Cột Giữa: Chart TradingView */}
+        <section className="layout-col-fluid">
+            {/* 2. Nhúng TradingChart vào đây */}
+            <TradingChart symbol="BTCUSDT" />
+        </section>
+        
+        {/* Cột Phải: Market Trades */}
+        <aside className="layout-col-fixed border-left">
+           <Trades symbol="BTCUSDT" />
+        </aside>
+
+      </main>
     </div>
   );
 }
+
+export default Admin_Dashboard;

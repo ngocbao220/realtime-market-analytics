@@ -1,0 +1,188 @@
+/* src/styles/Admin_Dashboard.css */
+
+.admin-container {
+  /* --- FIX LỖI KHÔNG CUỘN --- */
+  height: 100vh;       /* Chiếm toàn bộ chiều cao màn hình */
+  overflow-y: auto;    /* Cho phép cuộn dọc nội dung bên trong */
+  
+  /* --- TỐI ƯU GIAO DIỆN --- */
+  padding: 32px 40px;
+  background-color: #161a1e;
+  color: #EAECEF;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  /* Căn giữa nội dung nếu màn hình quá to */
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+}
+
+/* Container con để giới hạn độ rộng, giúp giao diện gọn gàng hơn */
+.admin-content-wrapper {
+  width: 100%;
+  max-width: 1200px; /* Giới hạn chiều rộng tối đa, không bị bè ra hết màn hình */
+  margin: 0 auto;
+}
+
+/* --- Header Section --- */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mb-spacing {
+    margin-bottom: 24px; /* Giảm khoảng cách chút cho gọn */
+}
+
+.page-title {
+  font-size: 24px; /* Giảm font size tiêu đề cho tinh tế hơn */
+  font-weight: 700;
+  color: #EAECEF;
+  margin: 0;
+}
+
+/* --- Nút Back --- */
+.btn-back {
+    background-color: transparent;
+    color: #848E9C;
+    border: 1px solid #474D57;
+    padding: 8px 16px; /* Giảm padding nút */
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+  
+.btn-back:hover {
+    background-color: #2B3139;
+    color: #EAECEF;
+    border-color: #848E9C;
+}
+
+/* --- Table Styles --- */
+.table-wrapper {
+  background-color: #1e2329;
+  border-radius: 8px;
+  overflow: hidden; 
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid #2B3139;
+  width: 100%;
+  
+  /* Nếu bảng quá rộng trên mobile thì cho cuộn ngang */
+  overflow-x: auto; 
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border-spacing: 0;
+}
+
+/* Header hàng */
+.user-table thead tr {
+  background-color: #252a33;
+}
+
+.user-table th {
+  padding: 16px 20px; /* Tối ưu padding */
+  text-align: left;
+  color: #848E9C;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #2B3139;
+  white-space: nowrap; /* Không cho xuống dòng tiêu đề */
+}
+
+/* Các dòng dữ liệu */
+.user-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid #2B3139;
+  color: #EAECEF;
+  vertical-align: middle;
+}
+
+.user-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Hiệu ứng hover dòng */
+.user-table tbody tr {
+  transition: background-color 0.1s ease-in-out;
+}
+
+.user-table tbody tr:hover {
+  background-color: #2B3139;
+}
+
+/* --- Action Button (Xóa) --- */
+.action-cell {
+  text-align: right;
+}
+
+.btn-delete {
+  background-color: rgba(246, 70, 93, 0.1);
+  color: #F6465D;
+  border: 1px solid transparent;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-delete:hover {
+  background-color: #F6465D;
+  color: white;
+  box-shadow: 0 2px 8px rgba(246, 70, 93, 0.3);
+  transform: translateY(-1px);
+}
+
+/* --- Scrollbar riêng cho trang này --- */
+.admin-container::-webkit-scrollbar {
+    width: 8px;
+}
+.admin-container::-webkit-scrollbar-track {
+    background: #161a1e;
+}
+.admin-container::-webkit-scrollbar-thumb {
+    background: #2B3139;
+    border-radius: 4px;
+}
+.admin-container::-webkit-scrollbar-thumb:hover {
+    background: #474D57;
+}
+.btn-settings {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(240, 185, 11, 0.1); /* Màu vàng nhạt nền */
+  color: #F0B90B; /* Chữ vàng Binance */
+  border: 1px solid rgba(240, 185, 11, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin: 0 4px; /* Khoảng cách nếu có nhiều nút */
+}
+
+.btn-settings:hover {
+  background-color: #F0B90B;
+  color: #1e2329; /* Chữ chuyển sang đen khi hover nền vàng */
+  box-shadow: 0 2px 8px rgba(240, 185, 11, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-settings svg {
+  stroke-width: 2.5px; /* Làm icon đậm hơn chút */
+}
