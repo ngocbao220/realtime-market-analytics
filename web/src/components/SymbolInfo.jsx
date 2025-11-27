@@ -1,77 +1,52 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/SymbolInfo.css';
-import { Star, ChevronDown } from 'lucide-react'; // Thêm ChevronDown cho đẹp
-import { api } from '../api/client';
+import { Star, ChevronDown } from 'lucide-react'; 
+import { useSymbolTicker } from '../contexts/TickerContext'; // Import Hook từ Context
 
-// Danh sách các cặp coin bạn muốn hỗ trợ trong dropdown
+// Danh sách các cặp coin hỗ trợ trong dropdown
 const SUPPORTED_PAIRS = [
-    "BTCUSDT", "BNBUSDT", "BNBUSDT", "DOGEUSDT", "ETHUSDT", "SOLUSDT"
+    "BTCUSDT", "BNBUSDT", "DOGEUSDT", "ETHUSDT", "SOLUSDT"
 ];
 
 const SymbolInfo = ({ symbol = "BTCUSDT", onSymbolChange }) => {
-  const [ticker, setTicker] = useState(null);
+  // 1. Lấy dữ liệu từ Context (Thay vì tự tạo WebSocket)
+  const ticker = useSymbolTicker(symbol);
+
   const [priceColor, setPriceColor] = useState('text-green');
-  
   const prevPriceRef = useRef(0); 
-  const wsRef = useRef(null);
 
+  // 2. Logic so sánh giá để đổi màu (xanh/đỏ) khi giá thay đổi
   useEffect(() => {
-    // Reset ticker khi đổi symbol để tạo hiệu ứng loading nhẹ (tránh hiện dữ liệu cũ)
-    setTicker(null); 
-    prevPriceRef.current = 0;
+    if (ticker) {
+        const newPrice = parseFloat(ticker.price);
+        const oldPrice = prevPriceRef.current;
 
-    const socketUrl = api.getWebSocketUrl('/ws/tickers');
-    const ws = new WebSocket(socketUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => console.log(`✅ Connected to Tickers WS for ${symbol}`);
-
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (Array.isArray(data)) {
-                // Lọc lấy đúng coin đang chọn
-                const foundCoin = data.find(item => item.symbol === symbol);
-                
-                if (foundCoin) {
-                    const newPrice = parseFloat(foundCoin.price);
-                    const oldPrice = prevPriceRef.current;
-
-                    if (oldPrice > 0) { 
-                        if (newPrice > oldPrice) setPriceColor('text-green');
-                        else if (newPrice < oldPrice) setPriceColor('text-red');
-                    }
-
-                    prevPriceRef.current = newPrice;
-                    setTicker(foundCoin);
-                }
-            }
-        } catch (error) {
-            console.error("Error parsing WS data:", error);
+        if (oldPrice > 0 && newPrice !== oldPrice) { 
+            setPriceColor(newPrice > oldPrice ? 'text-green' : 'text-red');
         }
-    };
 
-    return () => {
-        if (wsRef.current) wsRef.current.close();
-    };
-  }, [symbol]); // Chạy lại useEffect khi prop 'symbol' thay đổi
+        prevPriceRef.current = newPrice;
+    }
+  }, [ticker]); 
 
   // Logic hiển thị Loading hoặc data
   const isLoading = !ticker;
   
-  // Dữ liệu tạm hoặc dữ liệu thật
+  // Parse dữ liệu từ ticker context
   const currentPrice = isLoading ? 0 : parseFloat(ticker.price);
-  const openPrice = isLoading ? 0 : parseFloat(ticker.open);
-  const highPrice = isLoading ? 0 : parseFloat(ticker.high);
-  const lowPrice = isLoading ? 0 : parseFloat(ticker.low);
+  const openPrice    = isLoading ? 0 : parseFloat(ticker.open);
+  const closePrice    = isLoading ? 0 : parseFloat(ticker.close);
+  const highPrice    = isLoading ? 0 : parseFloat(ticker.high);
+  const lowPrice     = isLoading ? 0 : parseFloat(ticker.low);
   const percentChange = isLoading ? 0 : parseFloat(ticker.change);
-  const volBase = isLoading ? 0 : parseFloat(ticker.volume);
-  const volQuote = volBase * currentPrice;
+  const volBase      = isLoading ? 0 : parseFloat(ticker.volume);
+  const volQuote     = volBase * currentPrice;
 
   const priceChangeAmount = currentPrice - openPrice;
   const statsColorClass = percentChange >= 0 ? 'text-green' : 'text-red';
   const sign = percentChange >= 0 ? '+' : '';
 
+  // Formatters
   const formatPrice = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   const formatVol = (num) => {
       if (num >= 1000000000) return (num / 1000000000).toFixed(2) + 'B';
@@ -133,6 +108,16 @@ const SymbolInfo = ({ symbol = "BTCUSDT", onSymbolChange }) => {
                 <span className={`stat-value ${statsColorClass}`}>
                     {sign}{formatPrice(priceChangeAmount)} &nbsp; {sign}{percentChange}%
                 </span>
+                </div>
+
+                <div className="stat-item">
+                <span className="stat-label">Giá mở</span>
+                <span className="stat-value">{formatPrice(openPrice)}</span>
+                </div>
+
+                <div className="stat-item">
+                <span className="stat-label">Giá đóng</span>
+                <span className="stat-value">{formatPrice(closePrice)}</span>
                 </div>
 
                 <div className="stat-item">

@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login'; 
 import User_Dashboard from './pages/User_Dashboard'; 
 import Admin_Dashboard from './pages/Admin_Dashboard'; 
+import { TickerProvider } from './contexts/TickerContext'; // Import mới
 
 // --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
 const PrivateRoute = ({ children }) => {
@@ -26,40 +27,38 @@ const AdminRoute = ({ children }) => {
 function App() {
   const handleLogout = () => {
     localStorage.removeItem("user");
-    window.location.href = "/login"; // Logout đơn giản
+    window.location.href = "/login"; 
   };
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Mặc định vào login */}
-        <Route path="/" element={<Navigate to="/login" />} />
-        
-        <Route path="/login" element={<Login />} />
+      {/* Đặt Provider ở đây để bao bọc toàn bộ App hoặc chỉ bao bọc Dashboard */}
+      <TickerProvider> 
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/login" element={<Login />} />
 
-        {/* Route cho User thường (Trading) */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <PrivateRoute>
-              <User_Dashboard onLogout={handleLogout} />
-            </PrivateRoute>
-          } 
-        />
+          <Route 
+            path="/dashboard" 
+            element={
+              <PrivateRoute>
+                <User_Dashboard onLogout={handleLogout} />
+              </PrivateRoute>
+            } 
+          />
 
-        {/* Route cho Admin (Quản lý) */}
-        <Route 
-          path="/admin" 
-          element={
-            <AdminRoute>
-              <Admin_Dashboard />
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Đường dẫn sai bất kỳ thì quay về login */}
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+          <Route 
+            path="/admin" 
+            element={
+              <AdminRoute>
+                <Admin_Dashboard />
+              </AdminRoute>
+            } 
+          />
+          
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      </TickerProvider>
     </BrowserRouter>
   );
 }

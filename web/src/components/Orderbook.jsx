@@ -2,19 +2,43 @@ import React, { useEffect, useState, useRef } from 'react';
 import '../styles/OrderBook.css';
 import { MoreHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
 import { api } from '../api/client';
+import { useSymbolTicker } from '../contexts/TickerContext'; // Import Hook từ Context
 
 const OrderBook = ({ symbol = "BTCUSDT" }) => {
   const [bids, setBids] = useState([]);
   const [asks, setAsks] = useState([]);
-  const [tickerPrice, setTickerPrice] = useState(0);
-  const [priceChange, setPriceChange] = useState(0);
+  
+  // 1. Lấy dữ liệu Ticker từ Context (Đã xóa WS Ticker riêng ở đây)
+  const tickerData = useSymbolTicker(symbol);
+  
+  // Các state hiển thị local
   const [priceTrend, setPriceTrend] = useState('equal');
-
-  const orderbookWsRef = useRef(null);
-  const tickerWsRef = useRef(null);
   const lastPriceRef = useRef(0);
+  const orderbookWsRef = useRef(null);
 
-  // --- HÀM XỬ LÝ DATA ---
+  // 2. Theo dõi thay đổi giá từ Context để xác định Trend (Up/Down)
+  useEffect(() => {
+    if (tickerData) {
+        const newPrice = parseFloat(tickerData.price);
+        const oldPrice = lastPriceRef.current;
+
+        if (oldPrice > 0) {
+            if (newPrice > oldPrice) setPriceTrend('up');
+            else if (newPrice < oldPrice) setPriceTrend('down');
+            else setPriceTrend('equal');
+        }
+        
+        lastPriceRef.current = newPrice;
+    }
+  }, [tickerData]);
+
+  // Các biến hiển thị derived từ Context
+  const tickerPrice = tickerData ? parseFloat(tickerData.price) : 0;
+  const priceChange = tickerData ? parseFloat(tickerData.change) : 0;
+  const isPositiveChange = priceChange >= 0;
+  const trendColor = priceTrend === 'down' ? 'text-red' : 'text-green';
+
+  // --- HÀM XỬ LÝ DATA ORDERBOOK ---
   const processOrderBookData = (data) => {
     if (!Array.isArray(data)) return [];
     
@@ -38,7 +62,7 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
     }));
   };
 
-  // --- WEBSOCKET CHO ORDERBOOK ---
+  // --- WEBSOCKET CHO ORDERBOOK (Giữ nguyên vì đây là data riêng biệt) ---
   useEffect(() => {
     const endpoint = `/market/ws/orderbook/${symbol}?type=real&side=both`;
     const socketUrl = api.getWebSocketUrl(endpoint);
@@ -47,7 +71,7 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
     orderbookWsRef.current = ws;
 
     ws.onopen = () => {
-        console.log(`✅ Connected to Orderbook WS: ${symbol}`);
+        // console.log(`✅ Connected to Orderbook WS: ${symbol}`);
     };
 
     ws.onmessage = (event) => {
@@ -57,8 +81,6 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
             if (data) {
                 const newAsks = processOrderBookData(data.asks || []).slice(0, 15).reverse();
                 const newBids = processOrderBookData(data.bids || []).slice(0, 15);
-
-                
                 setAsks(newAsks);
                 setBids(newBids);
             }
@@ -67,64 +89,8 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
         }
     };
 
-    ws.onerror = (error) => {
-        console.error("Orderbook WebSocket Error:", error);
-    };
-
     return () => {
         if (orderbookWsRef.current) orderbookWsRef.current.close();
-    };
-  }, [symbol]);
-
-  // --- WEBSOCKET CHO TICKER (GIÁ THẬT) ---
-  useEffect(() => {
-    const socketUrl = api.getWebSocketUrl('/ws/tickers');
-    
-    console.log("Connecting Ticker WS to:", socketUrl);
-    
-    const ws = new WebSocket(socketUrl);
-    tickerWsRef.current = ws;
-
-    ws.onopen = () => {
-        console.log("✅ Connected to Ticker WebSocket");
-    };
-
-    ws.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            
-            if (Array.isArray(data)) {
-                // Tìm ticker của symbol hiện tại
-                const currentTicker = data.find(ticker => ticker.symbol === symbol);
-                
-                if (currentTicker) {
-                    const newPrice = parseFloat(currentTicker.price);
-                    const change = parseFloat(currentTicker.change || 0);
-                    
-                    // Xác định trend dựa vào giá cũ
-                    const oldPrice = lastPriceRef.current;
-                    if (oldPrice > 0) {
-                        if (newPrice > oldPrice) setPriceTrend('up');
-                        else if (newPrice < oldPrice) setPriceTrend('down');
-                        else setPriceTrend('equal');
-                    }
-                    
-                    lastPriceRef.current = newPrice;
-                    setTickerPrice(newPrice);
-                    setPriceChange(change);
-                }
-            }
-        } catch (err) {
-            console.error("Error parsing Ticker WS message:", err);
-        }
-    };
-
-    ws.onerror = (error) => {
-        console.error("Ticker WebSocket Error:", error);
-    };
-
-    return () => {
-        if (tickerWsRef.current) tickerWsRef.current.close();
     };
   }, [symbol]);
 
@@ -144,9 +110,6 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
     if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
     return num.toFixed(2);
   };
-
-  const trendColor = priceTrend === 'down' ? 'text-red' : 'text-green';
-  const isPositiveChange = priceChange >= 0;
 
   return (
     <div className="orderbook-container">
@@ -180,6 +143,7 @@ const OrderBook = ({ symbol = "BTCUSDT" }) => {
         ))}
       </div>
 
+      {/* --- PHẦN TICKER GIỮA ORDERBOOK (Dùng data từ Context) --- */}
       <div className="ob-ticker">
          <span className={`ticker-price-large ${trendColor}`}>
             {formatPrice(tickerPrice)} 

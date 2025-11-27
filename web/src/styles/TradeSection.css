@@ -204,3 +204,65 @@
   margin-left: 4px;
 }
 .login-link:hover { text-decoration: underline; }
+
+/* --- Custom Input Spinner --- */
+
+/* 1. Ẩn nút tăng giảm mặc định của trình duyệt */
+.trade-input.no-spin::-webkit-outer-spin-button,
+.trade-input.no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.trade-input.no-spin {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* 2. Wrapper để chứa input và nút custom */
+.custom-input-wrapper {
+  flex: 1;
+  display: flex;
+  position: relative;
+  align-items: center;
+}
+
+/* 3. Input chiếm hết chiều rộng */
+.custom-input-wrapper .trade-input {
+  width: 100%;
+  padding-right: 20px; /* Chừa chỗ cho nút spin */
+}
+
+/* 4. Container cho 2 nút mũi tên */
+.spin-controls {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 5. Style cho từng nút mũi tên */
+.spin-btn {
+  background: #2B3139;
+  border: none;
+  color: #848E9C;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px; /* Chiều cao nhỏ */
+  transition: all 0.2s;
+}
+
+.spin-btn:hover {
+  background: #474D57;
+  color: #F0B90B; /* Màu vàng Binance khi hover */
+}
+
+.spin-btn:active {
+  background: #5E6673;
+}
