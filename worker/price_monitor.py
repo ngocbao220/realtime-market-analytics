@@ -7,7 +7,7 @@ import os
 
 # --- CONFIG ---
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-API_URL = os.getenv("API_URL", "http://api:8000")
+API_URL = os.getenv("API_URL", "http://34.124.203.62:8000")
 CHECK_INTERVAL = 30 # Worker chạy mỗi 30s
 
 # Setup Logging
