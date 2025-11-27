@@ -5,14 +5,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px; /* Giảm padding một chút trên mobile */
+  padding: 0 16px;
   height: 64px;
   background-color: #161a1e;
   border-bottom: 1px solid #2B3139;
   font-family: sans-serif;
   color: #EAECEF;
-  /* Ngăn thanh cuộn ngang của cả trang */
-  overflow: hidden; 
+  
+  /* --- QUAN TRỌNG: KHÔNG ĐƯỢC ĐỂ HIDDEN --- */
+  /* overflow: hidden;  <-- Dòng này làm mất menu, hãy xóa nó đi */
+  position: relative; /* Để z-index hoạt động đúng */
+  z-index: 100; /* Đảm bảo Header nằm trên các thành phần khác */
 }
 
 /* --- Khu vực bên trái (Logo + Nav + Ticker) --- */
@@ -20,9 +23,9 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  flex: 1; /* Chiếm toàn bộ không gian còn dư */
-  min-width: 0; /* Quan trọng: Cho phép flex container co lại nhỏ hơn nội dung */
-  margin-right: 16px; /* Tạo khoảng cách với nút User bên phải */
+  flex: 1;
+  min-width: 0;
+  margin-right: 16px;
 }
 
 .brand-logo {
@@ -30,53 +33,24 @@
   font-weight: 700;
   font-size: 1.5rem;
   cursor: pointer;
-  white-space: nowrap; /* Logo không bị xuống dòng */
-  flex-shrink: 0; /* Logo không bao giờ bị co nhỏ */
-}
-
-/* --- Menu Desktop --- */
-.nav-menu {
-  display: none; 
-  align-items: center;
-  gap: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #848E9C;
-  flex-shrink: 0; /* Menu không bị co nhỏ nếu hiện */
-}
-
-.nav-link {
-  text-decoration: none;
-  color: inherit;
-  transition: color 0.2s;
   white-space: nowrap;
-}
-
-.nav-link:hover {
-  color: #F0B90B;
+  flex-shrink: 0;
 }
 
 /* --- Ticker (Giá chạy) --- */
 .ticker-section {
-  display: flex; /* Luôn hiển thị (thay vì ẩn) */
+  display: flex;
   align-items: center;
   gap: 24px;
-  
-  /* Logic co giãn quan trọng */
-  flex: 1;          /* Tự động mở rộng */
-  overflow-x: auto; /* Nếu hẹp quá thì cho phép cuộn ngang */
-  
-  /* Ẩn thanh cuộn (Scrollbar) để đẹp hơn */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-  
-  /* Style đường kẻ dọc */
+  flex: 1;
+  overflow-x: auto; /* Cuộn ngang riêng cho ticker */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   border-left: 1px solid #2B3139;
   padding-left: 24px;
   margin-left: 8px;
 }
 
-/* Ẩn thanh cuộn trên Chrome/Safari/Opera */
 .ticker-section::-webkit-scrollbar {
   display: none;
 }
@@ -85,7 +59,7 @@
   display: flex;
   flex-direction: column;
   font-size: 0.75rem;
-  white-space: nowrap; /* Giá không bị xuống dòng */
+  white-space: nowrap;
 }
 
 .ticker-symbol {
@@ -102,7 +76,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0; /* Không bao giờ bị co lại hay biến mất */
+  flex-shrink: 0;
 }
 
 .ai-btn {
@@ -121,11 +95,6 @@
   white-space: nowrap;
 }
 
-/* Ẩn chữ "AI Helper" trên mobile để tiết kiệm chỗ */
-.ai-btn span {
-  display: none; 
-}
-
 .user-avatar {
   width: 32px;
   height: 32px;
@@ -137,44 +106,93 @@
   cursor: pointer;
   color: white;
   flex-shrink: 0;
+  border: 1px solid transparent;
+  transition: all 0.2s;
 }
 
-/* --- Media Queries (Xử lý Responsive) --- */
+.user-avatar:hover {
+  border-color: #F0B90B;
+}
 
-/* Màn hình Tablet trở lên (lớn hơn 768px) */
+/* --- LOGOUT DROPDOWN (Khung chữ nhật nhỏ) --- */
+
+/* Wrapper để định vị tương đối */
+.user-menu-wrapper {
+    position: relative;
+    height: 32px; /* Khớp với chiều cao avatar */
+    display: flex;
+    align-items: center;
+}
+
+/* Khung menu thả xuống */
+.logout-dropdown {
+    position: absolute;
+    top: 45px; /* Cách avatar một đoạn */
+    right: 0;
+    width: 160px;
+    background-color: #1e2329;
+    border: 1px solid #2B3139;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 1000;
+    padding: 8px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Mũi tên nhỏ chỉ lên trên (Optional) */
+.logout-dropdown::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    right: 10px;
+    width: 10px;
+    height: 10px;
+    background-color: #1e2329;
+    border-left: 1px solid #2B3139;
+    border-top: 1px solid #2B3139;
+    transform: rotate(45deg);
+}
+
+.user-info-mini {
+    padding: 8px;
+    border-bottom: 1px solid #2B3139;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #EAECEF;
+    font-weight: bold;
+}
+
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background-color: rgba(246, 70, 93, 0.1); /* Nền đỏ nhạt */
+    color: #F6465D; /* Chữ đỏ */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.logout-btn:hover {
+    background-color: rgba(246, 70, 93, 0.2); /* Đậm hơn khi hover */
+}
+
+/* Responsive */
 @media (min-width: 768px) {
-  .header-container {
-    padding: 0 24px;
-  }
-  
-  .ai-btn span {
-    display: inline; /* Hiện lại chữ AI Helper */
-  }
-
-  .ai-btn {
-    padding: 6px 16px;
-    font-size: 0.875rem;
-  }
+  .header-container { padding: 0 24px; }
+  .ai-btn { padding: 6px 16px; font-size: 0.875rem; }
 }
 
-/* Màn hình Desktop (lớn hơn 1024px) */
-@media (min-width: 1024px) {
-  .nav-menu {
-    display: flex; /* Hiện menu Markets/Trade */
-  }
-  
-  /* Khi menu hiện ra, ticker vẫn co giãn nhờ flex: 1 ở trên */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.text-green {
-  color: #0ECB81; /* Màu xanh Binance */
-}
-
-.text-red {
-  color: #F6465D; /* Màu đỏ Binance */
-}
-
-.ticker-change {
-  font-size: 0.7rem;
-  margin-top: 2px;
-}
+/* Màu tiện ích */
+.text-green { color: #0ECB81; }
+.text-red { color: #F6465D; }

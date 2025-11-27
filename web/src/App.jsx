@@ -1,10 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Import các trang (Đảm bảo đường dẫn đúng với cấu trúc thư mục của bạn)
+// Import các trang (Lưu ý: Sửa lại đường dẫn Manage_user cho đúng thư mục pages)
 import Login from './pages/Login'; 
 import User_Dashboard from './pages/User_Dashboard'; 
 import Admin_Dashboard from './pages/Admin_Dashboard'; 
+import Manage_user from './components/Manage_user'; // <--- Đã sửa từ components thành pages
 
 // --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
 const PrivateRoute = ({ children }) => {
@@ -26,15 +27,16 @@ const AdminRoute = ({ children }) => {
 function App() {
   const handleLogout = () => {
     localStorage.removeItem("user");
-    window.location.href = "/login"; // Logout đơn giản
+    window.location.href = "/login"; 
   };
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Mặc định vào login */}
-        <Route path="/" element={<Navigate to="/login" />} />
+        {/* 1. MẶC ĐỊNH VÀO LOGIN (Khi truy cập trang chủ /) */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
         
+        {/* Trang Login */}
         <Route path="/login" element={<Login />} />
 
         {/* Route cho User thường (Trading) */}
@@ -47,7 +49,7 @@ function App() {
           } 
         />
 
-        {/* Route cho Admin (Quản lý) */}
+        {/* Route cho Admin (Dashboard chính) */}
         <Route 
           path="/admin" 
           element={
@@ -56,9 +58,19 @@ function App() {
             </AdminRoute>
           } 
         />
+
+        {/* Route Quản lý User (Chỉ Admin) */}
+        <Route 
+          path="/manage-users" 
+          element={
+            <AdminRoute>
+               <Manage_user />
+            </AdminRoute>
+          } 
+        />
         
-        {/* Đường dẫn sai bất kỳ thì quay về login */}
-        <Route path="*" element={<Navigate to="/login" />} />
+        {/* Đường dẫn sai bất kỳ (404) -> Quay về Login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
