@@ -11,3 +11,4 @@ pandas
 plotly
 streamlit
 streamlit-autorefresh
+google-generativeai
