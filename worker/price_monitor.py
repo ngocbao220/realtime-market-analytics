@@ -23,7 +23,7 @@ def monitor_loop():
     logger.info("🚀 Starting Price Monitor (Top 5 Coins Strategy)...")
     
     # Danh sách 5 đồng Coin cố định
-    watchlist = ["BTC", "ETH", "BNB", "SOL", "DOGE"]
+    watchlist = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "DOGEUSDT"]
     
     # Lưu thời điểm phân tích lần cuối { "BTC": 17000000.0, ... }
     last_analysis_time = {}
