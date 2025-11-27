@@ -202,7 +202,7 @@ services:
       - CLICKHOUSE_DATABASE=default
       - CLICKHOUSE_DB=default
       # [NEW] Key Gemini cho tính năng AI Narrative (đã có trong file của bạn)
-      - GEMINI_API_KEY=AIzaSyBVyrKxCehEjedUmDaofsHytCecDH_iv_k
+      - GEMINI_API_KEY=AIzaSyDrLs0ITlh6uqokNj5zWp1IWiiRGQh9JuE
     volumes:
       - ./api:/app
     networks:
