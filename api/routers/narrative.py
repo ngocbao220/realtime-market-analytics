@@ -43,59 +43,38 @@ async def analyze_market(alert: MarketMovementAlert, background_tasks: Backgroun
         logger.error(f"Error in analyze endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ... (Giữ nguyên endpoint /alerts cũ) ...
+# ... (Giữ nguyên import)
+
 @router.get("/alerts")
 async def get_alerts():
+    """
+    Trả về nhận định mới nhất của 5 đồng coin quan trọng (Format: BTCUSDT).
+    """
     try:
-        # 1. Kiểm tra kết nối Redis
-        if not redis_client:
-            print("❌ LỖI: Redis Client chưa kết nối!")
-            return []
+        if not redis_client: return []
         
-        # 2. Lấy dữ liệu thô
         alerts_raw = redis_client.lrange("dashboard:alerts", 0, 49)
-        print(f"🔍 Debug: Tìm thấy {len(alerts_raw)} bản ghi trong Redis.")
-
-        if not alerts_raw:
-            return [] # Redis rỗng thật sự
-
-        alerts = []
-        for a in alerts_raw:
-            try:
-                alerts.append(json.loads(a))
-            except json.JSONDecodeError:
-                print(f"⚠️ Lỗi decode JSON: {a}")
-                continue
-
+        alerts = [json.loads(a) for a in alerts_raw]
+        
         unique_alerts = {}
         cleaned_list = []
         
-        # 3. Kiểm tra logic lọc
-        target_coins = ["BTC", "ETH", "BNB", "SOL", "DOGE"]
+        # [CẬP NHẬT] Danh sách target có thêm USDT
+        target_coins = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "DOGEUSDT"]
         
         for alert in alerts:
-            symbol = alert.get('symbol')
+            symbol = alert.get('symbol') # Lúc này symbol sẽ là "BTCUSDT"
             
-            # Debug: In ra xem symbol là gì
-            # print(f"👉 Checking symbol: {symbol}") 
-
-            # Chuẩn hóa symbol (đề phòng BTCUSDT vs BTC)
-            # Nếu symbol là BTCUSDT thì cắt bỏ USDT để so sánh
-            normalized_symbol = symbol.replace("USDT", "") if symbol else ""
-
-            if normalized_symbol in target_coins and normalized_symbol not in unique_alerts:
-                unique_alerts[normalized_symbol] = True
+            if symbol in target_coins and symbol not in unique_alerts:
+                unique_alerts[symbol] = True
                 cleaned_list.append(alert)
         
-        print(f"✅ Debug: Trả về {len(cleaned_list)} bản ghi sau khi lọc.")
-        
         # Sắp xếp
-        cleaned_list.sort(key=lambda x: target_coins.index(x['symbol'].replace("USDT", "")) if x['symbol'].replace("USDT", "") in target_coins else 99)
+        cleaned_list.sort(key=lambda x: target_coins.index(x['symbol']) if x['symbol'] in target_coins else 99)
         
         return cleaned_list
-
     except Exception as e:
-        print(f"❌ Exception in get_alerts: {e}")
+        logger.error(f"Error fetching alerts: {e}")
         return []
 # [MỚI] Endpoint lấy tin tức cho nút "Tin tức"
 @router.get("/news")

@@ -32,7 +32,7 @@ def monitor_loop():
         for symbol in watchlist:
             try:
                 # 1. Lấy dữ liệu giá từ Redis
-                ticker_key = f"ticker_1d:{symbol}USDT"
+                ticker_key = f"ticker_1d:{symbol}"
                 ticker_data = r.get(ticker_key)
                 
                 if not ticker_data: 
