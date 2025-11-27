@@ -112,7 +112,7 @@ class ExchangeAPI {
     }
 
     async getTickers() {
-        const res = await this._req("GET", "/tickers");
+        const res = await this._req("GET", "/ticker_1d");
         return res || [];
     }
 
