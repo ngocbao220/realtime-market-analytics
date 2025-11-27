@@ -245,16 +245,17 @@ services:
     networks:
       - trading-network
   
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - api
-    networks:
-      - trading-network
+  # web:
+  #   build:
+  #     context: ./web
+  #     dockerfile: Dockerfile
+  #   container_name: web_dashboard
+  #   ports:
+  #     - "3000:80"
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - trading-network
 
 # ==================== NETWORKS & VOLUMES ====================
 networks:
