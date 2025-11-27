@@ -65,7 +65,7 @@ class NarrativeService:
         """
         Phân tích biến động giá dựa trên chuỗi sự kiện lịch sử (7 ngày).
         """
-        # [CẬP NHẬT] Đọc tin tức 7 ngày gần nhất (168h)
+        # [FIX QUAN TRỌNG] Sửa tham số lookback_hours từ 24 thành 168 (7 ngày)
         news_context = self.get_real_news_context(symbol, lookback_hours=168)
         
         if not self.model:
@@ -89,6 +89,7 @@ class NarrativeService:
             action_desc = f"BIẾN ĐỘNG NHẸ {change_percent}%"
 
         # 2. Tạo Prompt nâng cao (Chain-of-Thought)
+        # [FIX] Cập nhật Prompt để AI biết đây là dữ liệu 7 ngày
         prompt = f"""
         Bạn là chuyên gia phân tích thị trường Crypto (Market Intelligence).
         
