@@ -4,7 +4,7 @@ COPY package*.json ./
 	# 2. Cài đặt thư viện (dùng npm install nếu không có package-lock.json)
 	RUN npm install
 COPY . .
-RUN npm run build
+RUN npm run dev
 
 FROM nginx:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
