@@ -1,43 +1,66 @@
 import React from 'react';
-import Header from './components/Header';
-import SymbolInfo from './components/SymbolInfo';
-import OrderBook from './components/Orderbook';
-import Trades from './components/Trades';
-import TradingChart from './components/TradingChart';
-import './index.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+// Import các trang (Đảm bảo đường dẫn đúng với cấu trúc thư mục của bạn)
+import Login from './pages/Login'; 
+import User_Dashboard from './pages/User_Dashboard'; 
+import Admin_Dashboard from './pages/Admin_Dashboard'; 
+
+// --- Component bảo vệ Route (Bắt buộc đăng nhập) ---
+const PrivateRoute = ({ children }) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  return user ? children : <Navigate to="/login" />;
+};
+
+// --- Component bảo vệ Route Admin (Chỉ admin mới vào được) ---
+const AdminRoute = ({ children }) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  // Nếu chưa đăng nhập -> Login
+  if (!user) return <Navigate to="/login" />;
+  // Nếu đăng nhập nhưng không phải admin -> Về Dashboard thường
+  if (user.username !== "admin") return <Navigate to="/dashboard" />;
+  
+  return children;
+};
 
 function App() {
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    window.location.href = "/login"; // Logout đơn giản
+  };
+
   return (
-    // .app-layout: Flex column, cao 100vh (đã định nghĩa trong index.css)
-    <div className="app-layout">
-      
-      {/* 1. Phần Đầu (Header + Info) - Chiều cao tự động */}
-      <header>
-        <Header />
-        <SymbolInfo />
-      </header>
-
-      {/* 2. Phần Thân (3 Cột) - Flex 1 để chiếm hết chiều cao còn lại */}
-      <main className="main-content-grid">
+    <BrowserRouter>
+      <Routes>
+        {/* Mặc định vào login */}
+        <Route path="/" element={<Navigate to="/login" />} />
         
-        {/* Cột Trái: OrderBook */}
-        <aside className="layout-col-fixed border-right">
-           <OrderBook symbol="BTCUSDT" />
-        </aside>
+        <Route path="/login" element={<Login />} />
 
-        {/* Cột Giữa: Chart TradingView */}
-        <section className="layout-col-fluid">
-            {/* 2. Nhúng TradingChart vào đây */}
-            <TradingChart symbol="BTCUSDT" />
-        </section>
+        {/* Route cho User thường (Trading) */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <PrivateRoute>
+              <User_Dashboard onLogout={handleLogout} />
+            </PrivateRoute>
+          } 
+        />
+
+        {/* Route cho Admin (Quản lý) */}
+        <Route 
+          path="/admin" 
+          element={
+            <AdminRoute>
+              <Admin_Dashboard />
+            </AdminRoute>
+          } 
+        />
         
-        {/* Cột Phải: Market Trades */}
-        <aside className="layout-col-fixed border-left">
-           <Trades symbol="BTCUSDT" />
-        </aside>
-
-      </main>
-    </div>
+        {/* Đường dẫn sai bất kỳ thì quay về login */}
+        <Route path="*" element={<Navigate to="/login" />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
