@@ -43,41 +43,25 @@ async def analyze_market(alert: MarketMovementAlert, background_tasks: Backgroun
         logger.error(f"Error in analyze endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ... (Phần import giữ nguyên)
-
+# ... (Giữ nguyên endpoint /alerts cũ) ...
 @router.get("/alerts")
 async def get_alerts():
-    """
-    Trả về nhận định mới nhất của 5 đồng coin quan trọng.
-    """
     try:
-        if not redis_client:
-            return []
-        
-        # Lấy 50 bản ghi gần nhất từ Redis
+        if not redis_client: return []
         alerts_raw = redis_client.lrange("dashboard:alerts", 0, 49)
         alerts = [json.loads(a) for a in alerts_raw]
-        
         unique_alerts = {}
         cleaned_list = []
-        
-        # [QUAN TRỌNG] Logic lọc: Chỉ lấy bản ghi ĐẦU TIÊN (mới nhất) gặp được của mỗi Symbol
-        target_coins = ["BTC", "ETH", "BNB", "SOL", "DOGE"]
-        
         for alert in alerts:
-            symbol = alert.get('symbol')
-            # Nếu là coin nằm trong danh sách theo dõi VÀ chưa có trong list kết quả
-            if symbol in target_coins and symbol not in unique_alerts:
+            symbol = alert['symbol']
+            if symbol not in unique_alerts:
                 unique_alerts[symbol] = True
                 cleaned_list.append(alert)
-        
-        # Sắp xếp lại theo thứ tự ưu tiên (BTC -> ETH -> BNB...)
-        cleaned_list.sort(key=lambda x: target_coins.index(x['symbol']) if x['symbol'] in target_coins else 99)
-        
         return cleaned_list
     except Exception as e:
         logger.error(f"Error fetching alerts: {e}")
         return []
+
 # [MỚI] Endpoint lấy tin tức cho nút "Tin tức"
 @router.get("/news")
 async def get_news():
