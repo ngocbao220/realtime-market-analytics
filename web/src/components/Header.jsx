@@ -9,13 +9,18 @@ const Header = () => {
   const [tickers, setTickers] = useState([]);
   const ws = useRef(null);
 
-  // State quản lý Popup
-  const [activePopup, setActivePopup] = useState(null);
-  const [aiAlerts, setAiAlerts] = useState([]); // Dữ liệu cho nút Dự báo
-  const [newsList, setNewsList] = useState([]); // Dữ liệu cho nút Tin tức
+  // --- STATE QUẢN LÝ POPUP & DATA ---
+  const [activePopup, setActivePopup] = useState(null); // 'news' | 'price' | null
+  
+  // Data cho nút Dự báo
+  const [aiAlerts, setAiAlerts] = useState([]); 
+  
+  // Data cho nút Tin tức (Dạng tóm tắt văn bản)
+  const [newsSummary, setNewsSummary] = useState({ summary: "", time: "" });
+  
   const [loading, setLoading] = useState(false);
 
-  // 1. WebSocket Ticker
+  // 1. WEBSOCKET TICKER (Giữ nguyên logic cũ)
   useEffect(() => {
     const socketUrl = api.getWebSocketUrl('/ws/tickers');
     ws.current = new WebSocket(socketUrl);
@@ -28,56 +33,49 @@ const Header = () => {
     return () => { if (ws.current) ws.current.close(); };
   }, []);
 
-  // 2. Fetch Data khi mở Popup
-  // 2. Fetch Data khi mở Popup
+  // 2. FETCH DATA KHI MỞ POPUP (Logic mới)
   useEffect(() => {
     let interval;
     const fetchData = async () => {
+      // Nếu không mở popup nào thì không fetch
+      if (!activePopup) return;
+
       setLoading(true);
-      
-      // DEBUG: Kiểm tra URL trước khi gọi
-      const targetUrl = activePopup === 'price' 
-        ? `${API_BASE_URL}/narrative/alerts`
-        : `${API_BASE_URL}/narrative/news`;
-        
-      console.log(`[DEBUG] Đang gọi API: ${targetUrl}`); // Xem URL in ra đúng chưa
-
       try {
-        if (!activePopup) return;
+        let url = '';
+        if (activePopup === 'price') url = `${API_BASE_URL}/narrative/alerts`;
+        else if (activePopup === 'news') url = `${API_BASE_URL}/narrative/news-summary`;
 
-        const res = await fetch(targetUrl);
+        if (url) {
+          const res = await fetch(url);
+          
+          // Kiểm tra lỗi HTTP (404, 500...)
+          if (!res.ok) {
+            console.error(`Fetch failed: ${res.status}`);
+            setLoading(false);
+            return;
+          }
 
-        // CASE 1: Server trả về lỗi (400, 404, 500)
-        if (!res.ok) {
-          console.error(`[LỖI HTTP] Status: ${res.status} - ${res.statusText}`);
-          // Đọc thử nội dung lỗi server trả về (nếu có)
-          const errorText = await res.text();
-          console.error("Nội dung lỗi từ Server:", errorText);
-          return; // Dừng lại
-        }
+          const data = await res.json();
 
-        // CASE 2: Thành công -> Parse JSON
-        const data = await res.json();
-        
-        if (activePopup === 'price') {
-            console.log("Fetched AI Alerts:", data);  
+          // Cập nhật State tương ứng
+          if (activePopup === 'price') {
             setAiAlerts(Array.isArray(data) ? data : []);
-        } else if (activePopup === 'news') {
-            console.log("Fetched News List:", data);
-            setNewsList(Array.isArray(data) ? data : []);
+          } else if (activePopup === 'news') {
+            // Data trả về format { summary: "...", time: "..." }
+            setNewsSummary(data || { summary: "", time: "" });
+          }
         }
-
       } catch (e) {
-        // CASE 3: Lỗi Mạng hoặc Lỗi Parse JSON
-        console.error("[LỖI KẾT NỐI/CODE]:", e);
+        console.error("API Error:", e);
       } finally {
         setLoading(false);
       }
     };
 
     if (activePopup) {
-      fetchData(); 
-      interval = setInterval(fetchData, 10000);
+      fetchData(); // Gọi ngay khi mở
+      interval = setInterval(fetchData, 30000); // Tự refresh mỗi 30s
     }
 
     return () => clearInterval(interval);
@@ -85,7 +83,7 @@ const Header = () => {
 
   return (
     <header className="header-container">
-      {/* --- LEFT SECTION --- */}
+      {/* --- LEFT SECTION (Logo, Nav, Ticker) --- */}
       <div className="left-section">
         <div className="brand-logo">BINANCE</div>
         <nav className="nav-menu">
@@ -110,11 +108,11 @@ const Header = () => {
         </div>
       </div>
 
-      {/* --- RIGHT SECTION --- */}
+      {/* --- RIGHT SECTION (AI Buttons & Popup) --- */}
       <div className="right-section">
         <div className="ai-actions-group">
           
-          {/* Nút 1: Tin Tức */}
+          {/* NÚT 1: TIN TỨC */}
           <button
             className={`action-btn ${activePopup === 'news' ? 'active' : ''}`}
             onClick={() => setActivePopup(activePopup === 'news' ? null : 'news')}
@@ -123,7 +121,7 @@ const Header = () => {
             <span>Tin tức</span>
           </button>
 
-          {/* Nút 2: Dự Báo */}
+          {/* NÚT 2: DỰ BÁO */}
           <button
             className={`action-btn ${activePopup === 'price' ? 'active' : ''}`}
             onClick={() => setActivePopup(activePopup === 'price' ? null : 'price')}
@@ -132,7 +130,7 @@ const Header = () => {
             <span>Dự báo</span>
           </button>
 
-          {/* KHUNG POPUP */}
+          {/* --- KHUNG POPUP HIỂN THỊ NỘI DUNG --- */}
           {activePopup && (
             <div className="ai-popup">
               <div className="ai-popup-header">
@@ -143,7 +141,7 @@ const Header = () => {
                     <TrendingUp size={18} className="text-[#F0B90B]" />
                   )}
                   <span className="ai-title">
-                    {activePopup === 'news' ? 'Tin tức mới nhất (Crypto)' : 'Biến động giá 24h & Nhận định AI'}
+                    {activePopup === 'news' ? 'Tổng hợp Tin tức (7 ngày)' : 'Dự báo & Phân tích (24h)'}
                   </span>
                 </div>
                 <button className="close-btn" onClick={() => setActivePopup(null)}>
@@ -153,32 +151,40 @@ const Header = () => {
 
               <div className="ai-popup-body custom-scrollbar">
                 
-                {/* VIEW 1: TIN TỨC */}
+                {/* === VIEW 1: TIN TỨC (TÓM TẮT VĂN BẢN) === */}
                 {activePopup === 'news' && (
                   <div className="content-frame">
-                    {loading && newsList.length === 0 ? (
-                      <div className="loading-state">Đang tải tin tức...</div>
-                    ) : newsList.length === 0 ? (
-                      <div className="loading-state">Chưa có tin tức mới.</div>
+                    {loading && !newsSummary.summary ? (
+                      <div className="loading-state">
+                         <div className="typing-indicator"><span></span><span></span><span></span></div>
+                         <p>AI đang đọc tin tức tuần qua...</p>
+                      </div>
                     ) : (
-                      newsList.map((item, idx) => (
-                        <div key={idx} className="news-card">
-                          <div className="news-title">
-                            <a href={item.url} target="_blank" rel="noreferrer" className="hover:text-[#F0B90B]">
-                              {item.title}
-                            </a>
+                      <div className="text-block">
+                          {/* Header nhỏ hiển thị thời gian cập nhật */}
+                          <div className="flex justify-between items-center mb-3 border-b border-[#474D57] pb-2">
+                              <span className="text-[#F0B90B] font-bold text-xs uppercase tracking-wide">
+                                  ⚡ AI Market Recap
+                              </span>
+                              <span className="text-[10px] text-[#848E9C]">
+                                  Cập nhật: {newsSummary.time || "Mới nhất"}
+                              </span>
                           </div>
-                          <div className="news-meta">
-                            <span className="news-source">{item.source}</span>
-                            <span className="news-time">{item.time}</span>
+
+                          {/* Nội dung tóm tắt (Hỗ trợ xuống dòng) */}
+                          <div className="text-[#EAECEF] text-[13px] leading-6 whitespace-pre-line text-justify">
+                              {newsSummary.summary || "Chưa có dữ liệu tổng hợp. Vui lòng quay lại sau."}
                           </div>
-                        </div>
-                      ))
+
+                          <div className="mt-4 pt-2 border-t border-[#2B3139] text-[10px] text-[#5E6673] italic">
+                              *Tổng hợp tự động từ dữ liệu On-chain & Báo chí.
+                          </div>
+                      </div>
                     )}
                   </div>
                 )}
 
-                {/* VIEW 2: DỰ BÁO (ALERTS) */}
+                {/* === VIEW 2: DỰ BÁO (LIST COIN CARDS) === */}
                 {activePopup === 'price' && (
                   <div className="content-frame">
                     <div className="mb-2 text-xs text-gray-500 italic text-center">
@@ -191,36 +197,49 @@ const Header = () => {
                         <p>Đang tải nhận định...</p>
                       </div>
                     ) : aiAlerts.length === 0 ? (
-                      <div className="loading-state">Hệ thống đang khởi động, vui lòng thử lại sau 30s.</div>
+                      <div className="loading-state">Hệ thống đang khởi động... (Vui lòng chờ 1-2 phút)</div>
                     ) : (
                       aiAlerts.map((alert, idx) => {
-                        const isPump = alert.change >= 0;
+                        // Kiểm tra dữ liệu an toàn
+                        if (!alert || !alert.symbol) return null;
+
+                        // 1. Cắt đuôi USDT để hiển thị đẹp (BTCUSDT -> BTC)
+                        const displaySymbol = alert.symbol.replace("USDT", "");
+                        
+                        // 2. Tính toán màu sắc
+                        const changeVal = alert.change ? parseFloat(alert.change) : 0;
+                        const isPump = changeVal >= 0;
                         const colorClass = isPump ? "text-[#0ECB81]" : "text-[#F6465D]";
                         const arrow = isPump ? "↑" : "↓";
+
+                        // 3. Xử lý văn bản nhận định (Xóa prefix thừa nếu có)
+                        let summary = alert.analysis?.summary || "Đang cập nhật...";
+                        summary = summary.replace(/^Nhận định:\s*/i, "");
 
                         return (
                           <div key={idx} className="ai-card">
                             <div className="card-header border-b border-[#2B3139] pb-2 mb-2">
                               <div className="flex items-center gap-2">
-                                {/* Icon Coin */}
+                                {/* Icon Coin giả lập */}
                                 <div className="w-6 h-6 rounded-full bg-[#2B3139] flex items-center justify-center text-[10px] font-bold text-[#EAECEF] border border-[#474D57]">
-                                  {alert.symbol[0]}
+                                  {displaySymbol[0]}
                                 </div>
-                                <span className="coin-name text-sm">{alert.symbol}/USDT</span>
+                                <span className="coin-name text-sm">{displaySymbol}/USDT</span>
                               </div>
 
                               <div className={`text-xs font-mono font-bold ${colorClass} bg-[#2B3139] px-2 py-1 rounded`}>
-                                {arrow} {Math.abs(alert.change)}%
+                                {arrow} {Math.abs(changeVal).toFixed(2)}%
                               </div>
                             </div>
 
                             <div className="card-content">
                               <p className="text-[13px] leading-relaxed text-[#B7BDC6]">
                                 <span className="text-[#F0B90B] font-bold">AI Nhận định: </span>
-                                {alert.analysis?.summary || "Đang cập nhật..."}
+                                {summary}
                               </p>
                               <div className="mt-2 text-[10px] text-[#5E6673] flex justify-between">
-                                <span>Giá: ${alert.price}</span>
+                                {/* Format giá tiền có dấu phẩy */}
+                                <span>Giá: ${alert.current_price || alert.price}</span>
                                 <span>Cập nhật: {alert.timestamp}</span>
                               </div>
                             </div>

@@ -424,3 +424,19 @@
     color: #F0B90B;
     text-transform: uppercase;
 }
+
+.text-block {
+    background-color: #2B3139;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #474D57;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.whitespace-pre-line {
+    white-space: pre-line; /* Để hiển thị xuống dòng đúng như AI viết */
+}
+
+.text-justify {
+    text-align: justify;
+}

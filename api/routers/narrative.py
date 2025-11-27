@@ -81,3 +81,44 @@ async def get_alerts():
 async def get_news():
     """Trả về danh sách 10 tin mới nhất"""
     return narrative_service.get_raw_news(limit=10)
+
+
+# ... (Giữ nguyên import cũ)
+
+# [MỚI] Endpoint để Worker gọi định kỳ (Trigger AI tóm tắt)
+@router.post("/summarize-news")
+async def trigger_news_summary(background_tasks: BackgroundTasks):
+    try:
+        # Hàm chạy ngầm để không block API
+        def process_summary():
+            summary = narrative_service.summarize_weekly_news()
+            # Lưu vào Redis key 'dashboard:news_summary'
+            if redis_client:
+                redis_client.set("dashboard:news_summary", summary)
+                # Lưu thêm timestamp để biết cập nhật lúc nào
+                redis_client.set("dashboard:news_summary_time", time.strftime("%H:%M %d/%m"))
+        
+        background_tasks.add_task(process_summary)
+        return {"status": "Processing weekly summary..."}
+    except Exception as e:
+        logger.error(f"Error triggering summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# [MỚI] Endpoint để Frontend hiển thị
+@router.get("/news-summary")
+async def get_news_summary():
+    """Lấy bản tóm tắt tin tức từ Redis"""
+    try:
+        if not redis_client:
+            return {"summary": "Lỗi kết nối Redis", "time": ""}
+        
+        summary = redis_client.get("dashboard:news_summary")
+        updated_time = redis_client.get("dashboard:news_summary_time")
+        
+        return {
+            "summary": summary if summary else "Đang chờ AI tổng hợp dữ liệu tuần...",
+            "time": updated_time if updated_time else "Chưa cập nhật"
+        }
+    except Exception as e:
+        logger.error(f"Error fetching summary: {e}")
+        return {"summary": "Lỗi hệ thống.", "time": ""}

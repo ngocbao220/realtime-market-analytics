@@ -115,5 +115,60 @@ class NarrativeService:
             }
         except Exception as e:
             return {"summary": "Lỗi phân tích.", "detail": str(e), "confidence": "Low"}
+        
+
+
+    # ... (Giữ nguyên code cũ)
+
+    # [MỚI] Hàm tóm tắt tin tức tuần qua
+    def summarize_weekly_news(self):
+        if not self.ch_client or not self.model:
+            return "Hệ thống chưa sẵn sàng (DB hoặc AI lỗi)."
+
+        try:
+            # 1. Lấy tin tức trong 7 ngày qua (giới hạn 30 tin quan trọng nhất để tránh quá tải token)
+            query = """
+            SELECT title, content, published_at, source_id 
+            FROM news 
+            WHERE published_at >= now() - INTERVAL 7 DAY
+            ORDER BY published_at DESC 
+            LIMIT 30
+            """
+            rows = self.ch_client.execute(query)
+            
+            if not rows:
+                return "Không có đủ dữ liệu tin tức trong tuần qua để tổng hợp."
+
+            # 2. Tạo Context cho AI
+            news_text = ""
+            for row in rows:
+                title = row[0]
+                # Lấy 200 ký tự đầu của nội dung để tiết kiệm token
+                content_snippet = row[1][:200].replace("\n", " ") 
+                source = row[3]
+                news_text += f"- [{source}] {title}: {content_snippet}...\n"
+
+            # 3. Prompt cho Gemini
+            prompt = f"""
+            Bạn là biên tập viên tin tức Crypto chuyên nghiệp.
+            Dưới đây là danh sách các tin tức nổi bật trong 7 ngày qua:
+            
+            {news_text}
+            
+            YÊU CẦU:
+            Hãy viết một đoạn văn bản tóm tắt thị trường (khoảng 150-200 từ) bằng tiếng Việt.
+            - Tập trung vào các xu hướng chính, sự kiện vĩ mô hoặc biến động lớn.
+            - Giọng văn khách quan, súc tích, chuyên sâu.
+            - Không liệt kê từng tin, hãy tổng hợp thành câu chuyện (narrative).
+            - Bắt đầu bằng tiêu đề: "QUAN SÁT TUẦN QUA:"
+            """
+
+            # 4. Gọi AI
+            response = self.model.generate_content(prompt)
+            return response.text.strip()
+
+        except Exception as e:
+            self.logger.error(f"Summarize News Error: {e}")
+            return "Đã xảy ra lỗi trong quá trình tổng hợp tin tức."
 
 narrative_service = NarrativeService()
