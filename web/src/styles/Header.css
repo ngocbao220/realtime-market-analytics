@@ -386,3 +386,41 @@
     /* Popup dịch sang trái chút để không bị tràn màn hình */
     .ai-popup { width: 320px; right: -60px; }
 }
+
+/* ... Giữ nguyên các class cũ ... */
+
+/* Style cho News Card (Trong Popup Tin tức) */
+.news-card {
+    background-color: #2B3139;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border-left: 3px solid #474D57;
+    transition: background-color 0.2s;
+}
+
+.news-card:hover {
+    background-color: #343a40;
+    border-left-color: #F0B90B;
+}
+
+.news-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #EAECEF;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.news-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #848E9C;
+}
+
+.news-source {
+    font-weight: 700;
+    color: #F0B90B;
+    text-transform: uppercase;
+}

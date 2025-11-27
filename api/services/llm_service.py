@@ -1,9 +1,11 @@
+# ... (Giữ nguyên các import cũ)
 import logging
 import os
 import google.generativeai as genai
 from db import ch_client 
 
 class NarrativeService:
+    # ... (Giữ nguyên hàm __init__ cũ) ...
     def __init__(self):
         self.logger = logging.getLogger("NarrativeService")
         self.ch_client = ch_client 
@@ -16,25 +18,49 @@ class NarrativeService:
         else:
             try:
                 genai.configure(api_key=api_key)
-                # Dùng Flash cho nhanh và tiết kiệm chi phí
                 self.model = genai.GenerativeModel('models/gemini-2.5-flash') 
                 self.logger.info("✅ Gemini 2.5 Flash initialized successfully.")
             except Exception as e:
                 self.logger.error(f"Failed to initialize Gemini: {e}")
                 self.model = None
 
+    # ... (Giữ nguyên hàm get_real_news_context cũ) ...
+
+    # [MỚI] Hàm lấy tin tức thô cho Frontend hiển thị
+    def get_raw_news(self, limit: int = 10):
+        """Lấy danh sách tin tức mới nhất từ ClickHouse"""
+        if not self.ch_client:
+            return []
+        try:
+            # Lấy tin mới nhất, sắp xếp theo thời gian
+            query = f"""
+            SELECT title, published_at, source_id, url 
+            FROM news 
+            ORDER BY published_at DESC 
+            LIMIT {limit}
+            """
+            rows = self.ch_client.execute(query)
+            
+            news_list = []
+            for row in rows:
+                news_list.append({
+                    "title": row[0],
+                    "time": row[1].strftime("%H:%M %d/%m"), # Format giờ đẹp
+                    "source": row[2],
+                    "url": row[3]
+                })
+            return news_list
+        except Exception as e:
+            self.logger.error(f"Error fetching raw news: {e}")
+            return []
+
+    # ... (Giữ nguyên hàm analyze_market_movement cũ) ...
     def get_real_news_context(self, symbol: str, lookback_hours: int = 168) -> str:
-        """
-        Lấy tin tức trong 7 ngày qua (168h) để AI có context xu hướng.
-        """
+        # Code cũ của bạn...
         if not self.ch_client:
             return ""
-            
         try:
-            # Lấy tin liên quan Symbol hoặc Vĩ mô
             entities_filter = f"['{symbol}', 'SEC', 'MACRO', 'CRYPTO', 'FED']"
-            
-            # [CẬP NHẬT] Tăng giới hạn lấy tin lên 10 bài để có đủ dữ liệu xâu chuỗi sự kiện
             query = f"""
             SELECT title, content, published_at, url 
             FROM news 
@@ -43,96 +69,51 @@ class NarrativeService:
             ORDER BY published_at DESC
             LIMIT 10
             """
-            
             rows = self.ch_client.execute(query)
-            
-            if not rows:
-                return ""
-            
+            if not rows: return ""
             context = ""
             for i, row in enumerate(rows):
                 title, content, pub_at, url = row
-                # Cắt ngắn nội dung mỗi bài để tránh quá tải token
                 short_content = content[:300] + "..." if len(content) > 300 else content
                 context += f"{i+1}. [{pub_at.strftime('%Y-%m-%d %H:%M')}] {title}\n   Nội dung: {short_content}\n   Nguồn: {url}\n\n"
-            
             return context
         except Exception as e:
             self.logger.error(f"ClickHouse RAG Error: {e}")
             return ""
 
     def analyze_market_movement(self, symbol: str, change_percent: float, current_price: float):
-        """
-        Phân tích biến động giá dựa trên chuỗi sự kiện lịch sử (7 ngày).
-        """
-        # [FIX QUAN TRỌNG] Sửa tham số lookback_hours từ 24 thành 168 (7 ngày)
+        # Code cũ của bạn...
         news_context = self.get_real_news_context(symbol, lookback_hours=168)
         
         if not self.model:
-            return {
-                "summary": f"Biến động: {symbol} {change_percent}% (Chưa cấu hình AI).",
-                "detail": "Vui lòng kiểm tra API Key.",
-                "confidence": "Low",
-                "source": "System"
-            }
+            return {"summary": "Chưa cấu hình AI.", "confidence": "Low", "source": "System"}
 
-        # 1. Xác định xu hướng hiện tại (Snapshot 24h)
         trend = "STABLE"
-        if change_percent >= 3.0:
-            trend = "UP"
-            action_desc = f"TĂNG MẠNH {change_percent}%"
-        elif change_percent <= -3.0:
-            trend = "DOWN"
-            action_desc = f"GIẢM MẠNH {change_percent}%"
-        else:
-            trend = "SIDEWAY"
-            action_desc = f"BIẾN ĐỘNG NHẸ {change_percent}%"
+        if change_percent >= 3.0: trend = "UP"
+        elif change_percent <= -3.0: trend = "DOWN"
+        else: trend = "SIDEWAY"
 
-        # 2. Tạo Prompt nâng cao (Chain-of-Thought)
-        # [FIX] Cập nhật Prompt để AI biết đây là dữ liệu 7 ngày
         prompt = f"""
-        Bạn là chuyên gia phân tích thị trường Crypto (Market Intelligence).
+        Bạn là chuyên gia phân tích Crypto.
+        TÌNH HUỐNG (24h qua): {symbol} biến động {change_percent}%, giá ${current_price}.
         
-        TÌNH HUỐNG HIỆN TẠI (24h qua):
-        - Tài sản: {symbol}
-        - Trạng thái: Giá {action_desc}, hiện tại là ${current_price}.
+        TIN TỨC (7 NGÀY):
+        {news_context if news_context else "Không có tin tức quan trọng."}
         
-        DỮ LIỆU LỊCH SỬ TIN TỨC (7 NGÀY QUA):
-        {news_context if news_context else "Không có tin tức nổi bật trong 7 ngày qua."}
-        
-        YÊU CẦU PHÂN TÍCH:
-        Hãy đóng vai trò là người kể chuyện, xâu chuỗi các sự kiện từ quá khứ (nếu có) để giải thích cho biến động hiện tại.
-        
-        1. Xu hướng: Tin tức tuần qua đang ủng hộ phe Mua (Bullish) hay phe Bán (Bearish)?
-        2. Nguyên nhân: Tại sao 24h qua giá lại biến động như vậy? Có phải là hệ quả của một tin tức trước đó không?
-        
-        OUTPUT FORMAT:
-        - Bắt đầu bằng: "Nhận định: ..."
-        - Nội dung: Tối đa 2-3 câu, tập trung vào quan hệ nhân quả.
-        - Ngôn ngữ: Tiếng Việt.
+        YÊU CẦU:
+        Giải thích ngắn gọn (2-3 câu) nguyên nhân biến động giá này dựa trên tin tức.
+        Bắt đầu bằng "Nhận định: ..."
         """
         
-        self.logger.info(f"Asking Gemini ({trend}) about {symbol} with 7-day context...")
-
         try:
             response = self.model.generate_content(prompt)
-            explanation = response.text.strip()
-            
             return {
-                "summary": explanation,
-                "detail": f"Dữ liệu tin tức tham khảo (7 ngày):\n{news_context}" if news_context else "Phân tích dựa trên hành động giá và thiếu vắng tin tức.",
+                "summary": response.text.strip(),
                 "confidence": "High" if news_context else "Medium",
                 "trend": trend,
                 "source": "Gemini 2.5 AI"
             }
-            
         except Exception as e:
-            self.logger.error(f"Gemini API Error: {e}")
-            return {
-                "summary": f"Lỗi phân tích cho {symbol}.",
-                "detail": str(e),
-                "confidence": "Low",
-                "source": "Error"
-            }
+            return {"summary": "Lỗi phân tích.", "detail": str(e), "confidence": "Low"}
 
 narrative_service = NarrativeService()
