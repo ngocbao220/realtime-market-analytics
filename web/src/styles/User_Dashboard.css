@@ -1,0 +1,83 @@
+/* --- 1. RESET & BASE STYLES --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%; /* Quan trọng: Giúp app chiếm toàn bộ chiều cao màn hình */
+  width: 100%;
+  overflow: hidden; /* Ngăn trang web bị cuộn (chỉ cuộn nội dung bên trong) */
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  background-color: #161a1e; /* Màu nền chính (Dark theme) */
+  color: #EAECEF; /* Màu chữ chính */
+}
+
+/* --- 2. CUSTOM SCROLLBAR (Thanh cuộn đẹp cho Dark Mode) --- */
+/* Áp dụng cho Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #161a1e; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2B3139; 
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #474D57; 
+}
+
+/* --- 3. APP LAYOUT CLASSES (Bố cục chia cột) --- */
+
+/* Container bao quanh toàn bộ App */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Chiếm 100% chiều cao view port */
+}
+
+/* Phần nội dung chính bên dưới Header (Chia 3 cột) */
+.main-content-grid {
+  display: flex;
+  flex: 1; /* Chiếm toàn bộ khoảng trống còn lại sau khi trừ Header */
+  overflow: hidden; /* Cắt bỏ phần thừa */
+  border-top: 1px solid #2B3139; /* Đường kẻ ngăn cách với SymbolInfo */
+}
+
+/* Cột Trái (Order Book) & Phải (Trades) */
+.layout-col-fixed {
+  width: 320px; /* Độ rộng cố định */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0; /* Không bị co lại khi màn hình nhỏ */
+}
+
+.border-right { border-right: 1px solid #2B3139; }
+.border-left { border-left: 1px solid #2B3139; }
+
+/* Cột Giữa (Biểu đồ) */
+.layout-col-fluid {
+  flex: 1; /* Tự động giãn ra chiếm hết khoảng trống ở giữa */
+  height: 100%;
+  position: relative;
+  background-color: #161a1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
