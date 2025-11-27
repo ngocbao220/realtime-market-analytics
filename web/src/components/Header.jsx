@@ -29,38 +29,55 @@ const Header = () => {
   }, []);
 
   // 2. Fetch Data khi mở Popup
+  // 2. Fetch Data khi mở Popup
   useEffect(() => {
     let interval;
     const fetchData = async () => {
       setLoading(true);
+      
+      // DEBUG: Kiểm tra URL trước khi gọi
+      const targetUrl = activePopup === 'price' 
+        ? `${API_BASE_URL}/narrative/alerts`
+        : `${API_BASE_URL}/narrative/news`;
+        
+      console.log(`[DEBUG] Đang gọi API: ${targetUrl}`); // Xem URL in ra đúng chưa
+
       try {
+        if (!activePopup) return;
+
+        const res = await fetch(targetUrl);
+
+        // CASE 1: Server trả về lỗi (400, 404, 500)
+        if (!res.ok) {
+          console.error(`[LỖI HTTP] Status: ${res.status} - ${res.statusText}`);
+          // Đọc thử nội dung lỗi server trả về (nếu có)
+          const errorText = await res.text();
+          console.error("Nội dung lỗi từ Server:", errorText);
+          return; // Dừng lại
+        }
+
+        // CASE 2: Thành công -> Parse JSON
+        const data = await res.json();
+        
         if (activePopup === 'price') {
-          // Gọi API lấy Alerts (Dự báo)
-          const res = await fetch(`${API_BASE_URL}/narrative/alerts`);
-          if (res.ok) {
-            const data = await res.json();
             console.log("Fetched AI Alerts:", data);  
             setAiAlerts(Array.isArray(data) ? data : []);
-          }
         } else if (activePopup === 'news') {
-          // Gọi API lấy News (Tin tức)
-          const res = await fetch(`${API_BASE_URL}/narrative/news`);
-          if (res.ok) {
-            const data = await res.json();
             console.log("Fetched News List:", data);
             setNewsList(Array.isArray(data) ? data : []);
-          }
         }
+
       } catch (e) {
-        console.error("API Error:", e);
+        // CASE 3: Lỗi Mạng hoặc Lỗi Parse JSON
+        console.error("[LỖI KẾT NỐI/CODE]:", e);
       } finally {
         setLoading(false);
       }
     };
 
     if (activePopup) {
-      fetchData(); // Fetch ngay khi mở
-      interval = setInterval(fetchData, 10000); // Refresh mỗi 10s
+      fetchData(); 
+      interval = setInterval(fetchData, 10000);
     }
 
     return () => clearInterval(interval);
