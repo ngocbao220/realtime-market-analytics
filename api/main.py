@@ -3,40 +3,41 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from services.user_service import init_special_account
+from routers import users, orders, market, klines, tickers, narrative
+from db import init_db
+
 # --- CẤU HÌNH LOGGING ---
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True
+)
 
-# --- IMPORT ROUTERS ---
-# Dùng try-except để tránh lỗi sập server nếu thiếu file
-try:
-    from routers import users, orders, market, klines, tickers
-    has_routers = True
-except ImportError as e:
-    logger.error(f"❌ Lỗi Import Routers: {e}")
-    has_routers = False
-
-# Mock service
-try:
-    from services.user_service import init_special_account
-except ImportError:
-    def init_special_account():
-        logger.warning("⚠️ Mock init_special_account")
-
+# --- LIFESPAN (Hợp nhất logic khởi tạo) ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 Starting Trading Backend...")
+    logging.info("🚀 Starting Trading Intelligence Backend...")
+
     try:
-        init_special_account()
-    except Exception:
-        pass
+        # 1. Khởi tạo tài khoản Admin/Special (Logic cũ)
+        init_special_account() 
+        logging.info("✅ Admin account verified/created.")
+        
+        # 2. Khởi tạo Database cho Tin tức/Narrative (Logic mới)
+        init_db()
+        logging.info("✅ News/Narrative DB initialized.")
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to initialize system: {e}")
+    
     yield
-    logger.info("🛑 Shutting down...")
+    logging.info("🛑 Shutting down...")
 
-app = FastAPI(title="Crypto API", version="2.0.0", lifespan=lifespan)
+# --- KHỞI TẠO APP ---
+app = FastAPI(title="Crypto Trading Intelligence API", version="2.1.0", lifespan=lifespan)
 
-# --- KHẮC PHỤC LỖI CORS ---
-# Quan trọng: Dùng ["*"] để cho phép cả localhost, 127.0.0.1 và redirect
+# --- CẤU HÌNH CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -45,18 +46,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- ĐĂNG KÝ ROUTER ---
-if has_routers:
-    app.include_router(users.router)
-    app.include_router(orders.router)
-    app.include_router(market.router)
-    app.include_router(klines.router)
-    app.include_router(tickers.router)
+# --- ĐĂNG KÝ ROUTER (Backend Trading) ---
+app.include_router(users.router)
+app.include_router(orders.router)
+app.include_router(market.router)
+app.include_router(klines.router)
+app.include_router(tickers.router)
+app.include_router(narrative.router)
 
+# --- ROOT ENDPOINT (Hợp nhất response) ---
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Backend Running"}
+    return {
+        "status": "ok",
+        "system": "Trading Backend + GraphRAG",
+        "ai_module": "Gemini 2.5 Flash Ready",
+        "message": "System is running fully operational",
+    }
 
 if __name__ == "__main__":
     import uvicorn
+    # Chạy trực tiếp file này
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
