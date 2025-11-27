@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bot, User, X } from 'lucide-react';
+import { Bot, User, X, Globe, Menu } from 'lucide-react';
 import { api } from '../api/client'; 
 import '../styles/Header.css'; 
 
-const API_BASE_URL = import.meta.env.VITE_API_URL; 
+const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const Header = () => {
   const [tickers, setTickers] = useState([]);
   const ws = useRef(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
-  const [aiAlerts, setAiAlerts] = useState([]); // Khởi tạo là mảng rỗng
+  const [aiAlerts, setAiAlerts] = useState([]);
 
+  // 1. WebSocket Ticker
   useEffect(() => {
     const socketUrl = api.getWebSocketUrl('/ws/tickers');
     ws.current = new WebSocket(socketUrl);
@@ -18,38 +19,28 @@ const Header = () => {
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (Array.isArray(data)) {
-           setTickers(data.slice(0, 4));
-        }
-      } catch (err) { }
+        if (Array.isArray(data)) setTickers(data.slice(0, 4));
+      } catch (err) {}
     };
     return () => { if (ws.current) ws.current.close(); };
   }, []);
 
-  // [FIX] Fetch AI Alerts an toàn hơn
+  // 2. Fetch AI Alerts
   useEffect(() => {
     let interval;
     if (showAIPanel) {
         const fetchAIAlerts = async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/narrative/alerts`);
-                if (!res.ok) throw new Error("API Error"); // Bắt lỗi HTTP (404, 500)
-                
+                if (!res.ok) throw new Error("API Error");
                 const data = await res.json();
-                
-                // [QUAN TRỌNG] Chỉ set state nếu data thực sự là Mảng
-                if (Array.isArray(data)) {
-                    setAiAlerts(data);
-                } else {
-                    console.warn("AI Alerts format invalid:", data);
-                    setAiAlerts([]); // Reset về mảng rỗng nếu dữ liệu sai
-                }
+                if (Array.isArray(data)) setAiAlerts(data);
+                else setAiAlerts([]);
             } catch (e) {
-                console.error("Lỗi lấy tin AI:", e);
-                setAiAlerts([]); // Đảm bảo luôn là mảng để không lỗi .map()
+                console.error("AI Error:", e);
+                setAiAlerts([]);
             }
         };
-
         fetchAIAlerts();
         interval = setInterval(fetchAIAlerts, 5000); 
     }
@@ -58,88 +49,103 @@ const Header = () => {
 
   return (
     <header className="header-container">
-      <div className="left-section">
+      {/* --- LEFT: LOGO & MENU --- */}
+      <div className="header-left">
         <div className="brand-logo">BINANCE</div>
         <nav className="nav-menu">
-          <a href="#" className="nav-link">Markets</a>
-          <a href="#" className="nav-link">Trade</a>
+          <a href="#" className="nav-item active">Markets</a>
+          <a href="#" className="nav-item">Trade</a>
+          <a href="#" className="nav-item">Futures</a>
         </nav>
-        <div className="ticker-section">
+        
+        {/* Ticker chạy ngang */}
+        <div className="ticker-bar">
           {tickers.map((coin) => {
              const change = parseFloat(coin.change || 0);
              const isPositive = change >= 0;
-             const colorClass = isPositive ? 'text-green' : 'text-red';
              return (
                <div key={coin.symbol} className="ticker-item">
-                  <span className="ticker-symbol">{coin.symbol}</span>
-                  <div className="flex gap-2">
-                      <span className="ticker-price">{coin.price}</span>
-                      <span className={`text-xs ${colorClass}`}>
-                        {isPositive ? '+' : ''}{change}%
-                      </span>
-                  </div>
+                  <span className="t-symbol">{coin.symbol}</span>
+                  <span className="t-price">{coin.price}</span>
+                  <span className={`t-change ${isPositive ? 'up' : 'down'}`}>
+                    {isPositive ? '+' : ''}{change}%
+                  </span>
                </div>
              );
           })}
         </div>
       </div>
 
-      <div className="right-section">
-        <div style={{ position: 'relative' }}>
-            <button className="ai-btn" onClick={() => setShowAIPanel(!showAIPanel)}>
+      {/* --- RIGHT: USER & AI --- */}
+      <div className="header-right">
+        
+        {/* KHU VỰC AI HELPER (Wrapper giữ vị trí) */}
+        <div className="ai-wrapper">
+            <button 
+                className={`ai-btn ${showAIPanel ? 'active' : ''}`}
+                onClick={() => setShowAIPanel(!showAIPanel)}
+            >
                 <Bot size={18} />
                 <span>AI Helper</span>
             </button>
 
+            {/* POPUP NỔI (Absolute Position) */}
             {showAIPanel && (
-                <div className="absolute top-12 right-0 w-[450px] bg-[#1E2329] border border-[#2B3139] rounded-lg shadow-2xl z-50 overflow-hidden" style={{ fontFamily: 'sans-serif' }}>
-                    <div className="flex justify-between items-center p-4 border-b border-[#2B3139] bg-[#2B3139]/50">
-                        <div className="flex items-center gap-2">
-                            <Bot size={18} className="text-[#F0B90B]" />
-                            <h3 className="font-bold text-[#EAECEF] m-0 text-base">AI Market Insights</h3>
+                <div className="ai-popup">
+                    <div className="ai-popup-header">
+                        <div className="ai-title">
+                            <Bot size={18} className="ai-icon-gold" />
+                            <span>AI Market Insights</span>
                         </div>
-                        <button onClick={() => setShowAIPanel(false)} className="text-[#848E9C] hover:text-white cursor-pointer bg-transparent border-none p-1">
-                            <X size={20} />
+                        <button className="close-btn" onClick={() => setShowAIPanel(false)}>
+                            <X size={18} />
                         </button>
                     </div>
 
-                    <div className="max-h-[500px] overflow-y-auto custom-scrollbar p-2 space-y-2">
-                        {/* Kiểm tra length an toàn */}
+                    <div className="ai-popup-body custom-scrollbar">
                         {aiAlerts.length === 0 ? (
-                            <div className="p-8 text-center text-[#848E9C] text-sm">
-                                <p>Đang chờ dữ liệu phân tích...</p>
+                            <div className="empty-state">
+                                <div className="pulse-ring"></div>
+                                <p>Đang phân tích thị trường...</p>
                             </div>
                         ) : (
                             aiAlerts.map((alert, idx) => {
                                 const isPump = alert.change >= 0;
-                                const colorClass = isPump ? "text-[#0ECB81]" : "text-[#F6465D]";
-                                const bgClass = isPump ? "bg-[#0ECB81]/10" : "bg-[#F6465D]/10";
+                                const trendClass = isPump ? "trend-up" : "trend-down";
                                 
                                 return (
-                                    <div key={idx} className="bg-[#2B3139]/30 hover:bg-[#2B3139] p-3 rounded border border-transparent hover:border-[#474D57] transition-all mb-2">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-[#EAECEF] text-sm">{alert.symbol}</span>
-                                                <span className={`text-xs px-1.5 py-0.5 rounded ${bgClass} ${colorClass} font-medium`}>
+                                    <div key={idx} className="ai-card">
+                                        <div className="card-header">
+                                            <div className="coin-info">
+                                                <span className="coin-name">{alert.symbol}</span>
+                                                <span className={`coin-change ${trendClass}`}>
                                                     {isPump ? "+" : ""}{alert.change}%
                                                 </span>
                                             </div>
-                                            <span className="text-[10px] text-[#848E9C]">{alert.timestamp}</span>
+                                            <span className="time-stamp">{alert.timestamp}</span>
                                         </div>
-                                        <p className="text-xs text-[#B7BDC6] leading-relaxed m-0 text-left">
-                                            <span className={`${colorClass} font-bold mr-1`}>AI:</span>
-                                            {/* Xử lý an toàn cho chuỗi summary */}
-                                            {alert.analysis?.summary ? alert.analysis.summary.replace(/\$/g, "") : "Đang cập nhật..."}
-                                        </p>
+                                        
+                                        <div className="card-content">
+                                            <p>
+                                                {alert.analysis?.summary 
+                                                    ? alert.analysis.summary.replace(/\$/g, "") 
+                                                    : "Đang cập nhật..."}
+                                            </p>
+                                        </div>
                                     </div>
                                 );
                             })
                         )}
                     </div>
+                    <div className="ai-popup-footer">
+                        Powered by <strong>Gemini 2.5 Flash</strong> & GraphRAG
+                    </div>
                 </div>
             )}
         </div>
-        <div className="user-avatar"><User size={16} /></div>
+
+        <div className="icon-btn"><Globe size={18} /></div>
+        <div className="icon-btn"><User size={18} /></div>
       </div>
     </header>
   );
