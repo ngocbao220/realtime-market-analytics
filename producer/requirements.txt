@@ -2,3 +2,7 @@ kafka
 confluent_kafka
 websockets
 clickhouse_driver
+feedparser
+beautifulsoup4
+requests
+python-dateutil

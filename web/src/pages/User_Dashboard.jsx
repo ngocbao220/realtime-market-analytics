@@ -44,7 +44,7 @@ function User_Dashboard() {
                   <TradingChart symbol={currentSymbol} />
               </div>
               <div className="trade-form-container">
-                  <TradeForm symbol={currentSymbol} />
+                  <TradeForm />
               </div>
           </section>
           
@@ -57,7 +57,7 @@ function User_Dashboard() {
 
         {/* Phần History: Nằm bên dưới, phải cuộn mới thấy */}
         <div className="user-history-section">
-          <UserHistory symbol={currentSymbol} />
+          <UserHistory />
         </div>
 
       </div>

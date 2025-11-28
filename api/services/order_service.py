@@ -202,6 +202,11 @@ def cancel_virtual_order(user_id: str, order_id: str):
     amount = float(meta[3] or 0)
     filled_amount = float(meta[4] or 0)
 
+    if price <= 0:
+        return {"success": False, "msg": "Giá đặt lệnh phải lớn hơn 0"}
+    if amount <= 0:
+        return {"success": False, "msg": "Số lượng phải lớn hơn 0"}
+    
     try:
         # 2. Gọi Lua Script để Hủy và Hoàn tiền (Atomic)
         res = redis_client.evalsha(
@@ -262,7 +267,7 @@ def get_user_open_orders(user_id: str):
             try:
                 # Check status
                 order_status = order_data.get("status")
-                if order_status != "FILLED" or "CANCELED":
+                if order_status not in ["FILLED", "CANCELLED"]:
                     # Format return data
                     orders.append({
                         "order_id": order_data.get("order_id"),
@@ -278,3 +283,24 @@ def get_user_open_orders(user_id: str):
             
     # 3. Sort: Newest orders first
     return sorted(orders, key=lambda x: x["time"], reverse=True)
+
+def get_user_order_history(user_id: str, limit: int = 50):
+    """
+    Lấy lịch sử đặt lệnh (Đã khớp, Đã hủy) của User.
+    Key: user:{id}:order_history (List JSON)
+    """
+    history_key = f"user:{user_id}:order_history"
+    
+    # Lấy danh sách từ Redis (List)
+    raw_list = redis_client.lrange(history_key, 0, limit - 1)
+    
+    history = []
+    for item in raw_list:
+        try:
+            # Redis trả về bytes hoặc string, cần decode và parse JSON
+            data = json.loads(item)
+            history.append(data)
+        except Exception as e:
+            continue
+            
+    return history

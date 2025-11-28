@@ -4,10 +4,6 @@ clickhouse-driver==0.2.6
 pydantic==2.5.0
 python-dotenv==1.0.0
 redis
-pydantic
-python-dotenv
 requests
 pandas
-plotly
-streamlit
-streamlit-autorefresh
+google-generativeai
