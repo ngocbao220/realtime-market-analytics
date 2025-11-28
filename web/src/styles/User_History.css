@@ -1,154 +1,154 @@
 /* --- BIẾN MÀU SẮC CỤC BỘ (Nếu chưa khai báo global) --- */
 .user-history-container {
-  --bg-card: #1e2329;       /* Nền tối của Card */
-  --bg-hover: #2b3139;      /* Nền khi di chuột vào dòng */
-  --text-main: #eaecef;     /* Chữ chính (Trắng) */
-  --text-sub: #848e9c;      /* Chữ phụ (Xám) */
-  --border-color: #2b3139;  /* Đường viền */
-  --col-buy: #0ecb81;       /* Xanh Mua */
-  --col-sell: #f6465d;      /* Đỏ Bán */
-  --col-highlight: #fcd535; /* Vàng Highlight */
+    --bg-card: #1e2329;       /* Nền tối của Card */
+    --bg-hover: #2b3139;      /* Nền khi di chuột vào dòng */
+    --text-main: #eaecef;     /* Chữ chính (Trắng) */
+    --text-sub: #848e9c;      /* Chữ phụ (Xám) */
+    --border-color: #2b3139;  /* Đường viền */
+    --col-buy: #0ecb81;       /* Xanh Mua */
+    --col-sell: #f6465d;      /* Đỏ Bán */
+    --col-highlight: #fcd535; /* Vàng Highlight */
+    
+    background-color: var(--bg-card);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px; /* Chiều cao tối thiểu để không bị lép */
+    font-family: 'Inter', sans-serif;
+  }
   
-  background-color: var(--bg-card);
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  min-height: 300px; /* Chiều cao tối thiểu để không bị lép */
-  font-family: 'Inter', sans-serif;
-}
-
-/* --- TABS HEADER --- */
-.history-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border-color);
-  background-color: rgba(0,0,0,0.1); /* Hơi tối hơn nền chút */
-  padding: 0 8px;
-}
-
-.h-tab {
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-sub);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.h-tab:hover {
-  color: var(--text-main);
-}
-
-.h-tab.active {
-  color: var(--col-highlight);
-  font-weight: 600;
-}
-
-/* Gạch chân vàng cho tab active */
-.h-tab.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; /* Đè lên border bottom của container */
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background-color: var(--col-highlight);
-}
-
-/* --- CONTENT AREA --- */
-.history-content {
-  flex: 1;
-  overflow-x: auto; /* Cho phép cuộn ngang trên mobile */
-  padding-bottom: 10px;
-}
-
-/* --- TABLE STYLES --- */
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  white-space: nowrap; /* Giữ text thẳng hàng, không xuống dòng */
-}
-
-/* Header Bảng */
-.history-table th {
-  text-align: left;
-  padding: 12px 16px;
-  color: var(--text-sub);
-  font-weight: 400;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 12px;
-}
-
-/* Dòng dữ liệu */
-.history-table td {
-  padding: 10px 16px;
-  color: var(--text-main);
-  border-bottom: 1px solid rgba(43, 49, 57, 0.4); /* Viền mờ */
-  transition: background 0.15s;
-}
-
-/* Hiệu ứng Hover vào dòng */
-.history-table tbody tr:hover {
-  background-color: var(--bg-hover);
-}
-
-/* Căn phải cho cột Action hoặc Số liệu */
-.text-right {
-  text-align: right;
-}
-
-/* --- MÀU SẮC TRẠNG THÁI --- */
-.text-green-500 { color: var(--col-buy) !important; font-weight: 500; }
-.text-red-500 { color: var(--col-sell) !important; font-weight: 500; }
-
-/* --- NÚT CANCEL --- */
-.btn-cancel {
-  background: transparent;
-  border: 1px solid var(--col-sell);
-  color: var(--col-sell);
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  outline: none;
-}
-
-.btn-cancel:hover {
-  background-color: var(--col-sell);
-  color: white;
-  box-shadow: 0 0 8px rgba(246, 70, 93, 0.4); /* Glow nhẹ khi hover */
-}
-
-/* --- EMPTY STATE --- */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: var(--text-sub);
-  font-size: 14px;
-}
-
-/* --- CUSTOM SCROLLBAR (Cho bảng dài) --- */
-.history-content::-webkit-scrollbar {
-  height: 6px; /* Chiều cao thanh cuộn ngang */
-  width: 6px;
-}
-
-.history-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.history-content::-webkit-scrollbar-thumb {
-  background-color: #2b3139;
-  border-radius: 3px;
-}
-
-.history-content::-webkit-scrollbar-thumb:hover {
-  background-color: #474d57;
-}
+  /* --- TABS HEADER --- */
+  .history-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(0,0,0,0.1); /* Hơi tối hơn nền chút */
+    padding: 0 8px;
+  }
+  
+  .h-tab {
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  
+  .h-tab:hover {
+    color: var(--text-main);
+  }
+  
+  .h-tab.active {
+    color: var(--col-highlight);
+    font-weight: 600;
+  }
+  
+  /* Gạch chân vàng cho tab active */
+  .h-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; /* Đè lên border bottom của container */
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--col-highlight);
+  }
+  
+  /* --- CONTENT AREA --- */
+  .history-content {
+    flex: 1;
+    overflow-x: auto; /* Cho phép cuộn ngang trên mobile */
+    padding-bottom: 10px;
+  }
+  
+  /* --- TABLE STYLES --- */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap; /* Giữ text thẳng hàng, không xuống dòng */
+  }
+  
+  /* CẤU HÌNH CĂN GIỮA TOÀN BỘ BẢNG TẠI ĐÂY */
+  .history-table th, 
+  .history-table td {
+    text-align: center !important;    /* Căn giữa nội dung ngang */
+    vertical-align: middle !important; /* Căn giữa nội dung dọc */
+    padding: 12px 16px;
+  }
+  
+  /* Header Bảng */
+  .history-table th {
+    color: var(--text-sub);
+    font-weight: 400;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 12px;
+  }
+  
+  /* Dòng dữ liệu */
+  .history-table td {
+    color: var(--text-main);
+    border-bottom: 1px solid rgba(43, 49, 57, 0.4); /* Viền mờ */
+    transition: background 0.15s;
+  }
+  
+  /* Hiệu ứng Hover vào dòng */
+  .history-table tbody tr:hover {
+    background-color: var(--bg-hover);
+  }
+  
+  /* --- MÀU SẮC TRẠNG THÁI --- */
+  .text-green-500 { color: var(--col-buy) !important; font-weight: 500; }
+  .text-red-500 { color: var(--col-sell) !important; font-weight: 500; }
+  
+  /* --- NÚT CANCEL --- */
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--col-sell);
+    color: var(--col-sell);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+  }
+  
+  .btn-cancel:hover {
+    background-color: var(--col-sell);
+    color: white;
+    box-shadow: 0 0 8px rgba(246, 70, 93, 0.4); /* Glow nhẹ khi hover */
+  }
+  
+  /* --- EMPTY STATE --- */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-sub);
+    font-size: 14px;
+  }
+  
+  /* --- CUSTOM SCROLLBAR (Cho bảng dài) --- */
+  .history-content::-webkit-scrollbar {
+    height: 6px; /* Chiều cao thanh cuộn ngang */
+    width: 6px;
+  }
+  
+  .history-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .history-content::-webkit-scrollbar-thumb {
+    background-color: #2b3139;
+    border-radius: 3px;
+  }
+  
+  .history-content::-webkit-scrollbar-thumb:hover {
+    background-color: #474d57;
+  }

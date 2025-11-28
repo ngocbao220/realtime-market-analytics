@@ -297,8 +297,8 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
           {/* SỬA ĐỔI: Luôn hiện Legend MA bất kể chartType là gì */}
           {!isLoading && (
              <div className="absolute top-2 left-2 text-[10px] z-10 font-mono pointer-events-none">
-                <span className="text-[#F0B90B] mr-2">MA(7)</span>
-                <span className="text-[#E056FD]">MA(25)</span>
+                <span className="text-[#F0B90B] mr-2"></span>
+                <span className="text-[#E056FD]"></span>
              </div>
           )}
       </div>

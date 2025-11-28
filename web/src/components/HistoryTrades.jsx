@@ -1,133 +1,254 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { api } from "../api/client";
 import { useNavigate } from "react-router-dom";
-import '../styles/Admin_manageUser.css'; // Tận dụng lại CSS của Admin Dashboard
+import '../styles/Admin_manageUser.css';
 
 export default function HistoryTrades() {
-  const [allOrders, setAllOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // --- STATE ---
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("ALL");
+  
+  // Dữ liệu thô từ WebSocket (Raw Data)
+  const [rawOpenOrders, setRawOpenOrders] = useState([]);
+  const [rawHistory, setRawHistory] = useState([]);
+  const [rawTrades, setRawTrades] = useState([]);
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("open"); 
+
+  // Refs
+  const wsRef = useRef(null);
+
+  // 1. Load Users
   useEffect(() => {
-    fetchAllOrders();
+    api.getAllUsers().then(setUsers).catch(console.error);
   }, []);
 
-  const fetchAllOrders = async () => {
-    setLoading(true);
-    try {
-        // 1. Lấy danh sách tất cả Users
-        const users = await api.getAllUsers();
-        
-        // 2. Gọi song song API lấy order của từng user
-        const orderPromises = users.map(u => api.getOpenOrders(u.user_id));
-        const ordersResults = await Promise.all(orderPromises);
+  // 2. WebSocket Logic (Tách biệt hoàn toàn khỏi Logic hiển thị)
+  useEffect(() => {
+    // Reset data khi đổi User
+    setRawOpenOrders([]);
+    setRawHistory([]);
+    setRawTrades([]);
+    setIsLoading(true);
 
-        // 3. Gộp kết quả lại và thêm thông tin Username vào order
-        let combinedOrders = [];
-        ordersResults.forEach((orders, index) => {
-            if (Array.isArray(orders)) {
-                // Gắn thêm username vào mỗi order để biết của ai
-                const ordersWithUser = orders.map(o => ({
-                    ...o,
-                    username: users[index].username 
-                }));
-                combinedOrders = [...combinedOrders, ...ordersWithUser];
-            }
-        });
+    if (wsRef.current) wsRef.current.close();
 
-        // 4. Sắp xếp theo thời gian mới nhất
-        combinedOrders.sort((a, b) => b.timestamp - a.timestamp);
-        setAllOrders(combinedOrders);
+    const endpoint = selectedUserId === "ALL" 
+        ? "/orders/ws/admin/monitor" 
+        : `/orders/ws/history/${selectedUserId}`; // Dùng endpoint history để lấy tất cả
 
-    } catch (err) {
-        console.error("Lỗi tải lịch sử trade:", err);
-    }
-    setLoading(false);
-  };
+    // Nếu chọn Single User, cần thêm 1 WS nữa cho OpenOrders hoặc dùng polling
+    // Tuy nhiên để code gọn cho Admin, ta ưu tiên Logic Monitor ALL
+    // (Ở đây tôi setup theo logic Monitor mà bạn đang dùng chính)
+    
+    console.log(`📡 Connecting WS: ${endpoint}`);
+    const wsUrl = api.getWebSocketUrl(selectedUserId === "ALL" ? "/orders/ws/admin/monitor" : `/orders/ws/admin/monitor`); 
+    // LƯU Ý: Với Admin Dashboard, tốt nhất luôn dùng kênh Monitor để xem dữ liệu chuẩn
+    
+    wsRef.current = new WebSocket(wsUrl);
+    wsRef.current.onopen = () => setIsLoading(false);
+    
+    wsRef.current.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            
+            // Cập nhật State Thô (Raw State)
+            // Backend trả về: { open_orders, history, trades }
+            if (data.open_orders) setRawOpenOrders(data.open_orders);
+            if (data.history) setRawHistory(data.history);
+            if (data.trades) setRawTrades(data.trades);
+            
+            // Nếu là Single User mode mà API trả format khác, bạn cần handle riêng
+            // Nhưng tốt nhất Backend Admin Monitor nên hỗ trợ filter theo UserID luôn
+        } catch (e) {
+            console.error("WS Parse Error", e);
+        }
+    };
 
-  const handleCancelOrder = async (orderId, userId) => {
-      if(!window.confirm("Bạn muốn hủy lệnh này?")) return;
+    return () => {
+        if (wsRef.current) wsRef.current.close();
+    };
+  }, [selectedUserId]);
+
+
+  // 3. LOGIC LỌC DỮ LIỆU (Client-Side Guard) - QUAN TRỌNG NHẤT
+  // Dùng useMemo để tính toán lại mỗi khi rawData hoặc activeTab thay đổi
+  // Giúp đổi tab cực nhanh và không bị lag/sai data
+  const displayData = useMemo(() => {
+      let data = [];
       
-      const [success, msg] = await api.cancelOrder(orderId, userId);
-      if(success) {
-          fetchAllOrders(); // Reload lại danh sách
-      } else {
-          alert("Lỗi: " + msg);
+      if (activeTab === 'open') {
+          // FIX CỨNG: Chỉ lấy lệnh có status NEW hoặc PARTIAL
+          // Lọc bỏ mọi lệnh FILLED/CANCELLED dù backend có gửi nhầm
+          data = rawOpenOrders.filter(o => 
+              o.status === 'NEW' || o.status === 'PARTIAL'
+          );
+          
+          // Nếu đang chọn Single User (không phải ALL), lọc thêm theo ID ở Client (nếu dùng chung kênh Monitor)
+          if (selectedUserId !== "ALL") {
+              data = data.filter(o => String(o.user_id) === String(selectedUserId));
+          }
+
+      } else if (activeTab === 'history') {
+          data = rawHistory;
+          if (selectedUserId !== "ALL") {
+              data = data.filter(o => String(o.user_id) === String(selectedUserId));
+          }
+      } else if (activeTab === 'trades') {
+          // Chuẩn hóa Trades
+          data = rawTrades.map(t => ({
+              ...t,
+              amount: t.amount || t.qty || t.quantity || 0,
+              price: t.price || t.Price || 0,
+              time: t.time || t.timestamp || t.TradeTime,
+              side: t.side || t.Side || (t.isBuyer ? 'buy' : 'sell')
+          }));
+          if (selectedUserId !== "ALL") {
+              data = data.filter(t => String(t.user_id) === String(selectedUserId));
+          }
       }
+      
+      return data;
+  }, [activeTab, rawOpenOrders, rawHistory, rawTrades, selectedUserId]);
+
+
+  // --- Actions & Helpers ---
+  const handleCancelOrder = async (orderId, ownerId) => {
+      const uid = ownerId || selectedUserId;
+      if(!window.confirm(`Hủy lệnh ${orderId}?`)) return;
+      await api.cancelOrder(orderId, uid);
+      // Không cần alert hay reload, WS sẽ tự cập nhật
   };
 
-  // Helper format
-  const formatTime = (ts) => new Date(ts * 1000).toLocaleString('vi-VN');
-  const formatPrice = (num) => new Intl.NumberFormat('en-US').format(num);
+  const formatTime = (ts) => {
+      if (!ts) return "-";
+      const date = typeof ts === 'number' ? new Date(ts > 10000000000 ? ts : ts * 1000) : new Date(ts);
+      return date.toLocaleString('vi-VN');
+  };
+  const formatPrice = (n) => n ? new Intl.NumberFormat('en-US').format(n) : '0';
+
+  const renderSide = (side) => {
+      const s = String(side || "").toLowerCase();
+      const isBuy = s.includes('buy') || s.includes('bid');
+      return <span style={{color: isBuy ? '#0ECB81' : '#F6465D', fontWeight: 'bold'}}>{isBuy ? 'MUA' : 'BÁN'}</span>;
+  };
 
   return (
     <div className="admin-container">
       <div className="admin-content-wrapper">
-        
-        {/* Header */}
-        <div className="admin-header mb-spacing">
-          <h1 className="page-title">System Open Orders</h1>
-          
-          <button onClick={() => navigate("/admin")} className="btn-back">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '8px'}}>
-                  <path d="m12 19-7-7 7-7"/>
-                  <path d="M19 12H5"/>
-              </svg>
-              Back to Dashboard
-          </button>
+        <div className="admin-header mb-spacing" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '15px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}}>
+            <h1 className="page-title">Realtime Market Monitor</h1>
+            <button onClick={() => navigate("/admin")} className="btn-back">Dashboard</button>
+          </div>
+
+          <div style={{display: 'flex', alignItems: 'center', gap: '10px', background: '#2B3139', padding: '10px', borderRadius: '4px', width: '100%'}}>
+             <span style={{color: '#848E9C'}}>Target:</span>
+             <select 
+                className="user-select-dropdown"
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                style={{ minWidth: '250px', background: '#1E2329', color: '#EAECEF' }}
+             >
+                 <option value="ALL">🔴 ALL USERS (Global Stream)</option>
+                 {users.map(u => <option key={u.user_id} value={u.user_id}>{u.username}</option>)}
+             </select>
+             <span style={{marginLeft: 'auto', fontSize: '12px', color: '#0ECB81'}}>● Live</span>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="tabs-container" style={{display: 'flex', gap: '2px'}}>
+            {[
+                {k: 'open', l: 'OPEN ORDERS', count: rawOpenOrders.length}, 
+                {k: 'history', l: 'ORDER HISTORY', count: rawHistory.length}, 
+                {k: 'trades', l: 'TRADE HISTORY', count: rawTrades.length}
+            ].map(tab => (
+                <button
+                    key={tab.k}
+                    onClick={() => setActiveTab(tab.k)}
+                    style={{
+                        padding: '12px 24px',
+                        background: activeTab === tab.k ? '#1E2329' : '#2B3139',
+                        color: activeTab === tab.k ? '#F0B90B' : '#848E9C',
+                        borderTop: activeTab === tab.k ? '2px solid #F0B90B' : '2px solid transparent',
+                        cursor: 'pointer', fontWeight: 'bold'
+                    }}
+                >
+                    {tab.l} 
+                    {/* Badge đếm số lượng */}
+                    {selectedUserId === "ALL" && (
+                        <span style={{marginLeft: '8px', fontSize: '11px', background: '#474D57', padding: '2px 6px', borderRadius: '10px', color: 'white'}}>
+                            {tab.count}
+                        </span>
+                    )}
+                </button>
+            ))}
         </div>
 
         {/* Table */}
-        <div className="table-wrapper">
+        <div className="table-wrapper" style={{background: '#1E2329', minHeight: '400px'}}>
           <table className="user-table">
               <thead>
               <tr>
-                  <th style={{width: '15%'}}>Thời gian</th>
-                  <th style={{width: '15%'}}>User</th>
-                  <th style={{width: '10%'}}>Cặp</th>
-                  <th style={{width: '10%'}}>Loại</th>
-                  <th style={{width: '15%', textAlign: 'right'}}>Giá (USD)</th>
-                  <th style={{width: '15%', textAlign: 'right'}}>Số lượng</th>
-                  <th style={{width: '20%', textAlign: 'center'}}>Hành động</th>
+                  <th>Time</th>
+                  <th>User</th>
+                  <th>Symbol</th>
+                  <th>Side</th>
+                  <th style={{textAlign: 'right'}}>Price</th>
+                  <th style={{textAlign: 'right'}}>Amount</th>
+                  
+                  {activeTab !== 'trades' && <th>Status</th>}
+                  {activeTab === 'history' && <th style={{textAlign: 'right'}}>Filled</th>}
+                  {activeTab === 'open' && <th style={{textAlign: 'center'}}>Action</th>}
               </tr>
               </thead>
               <tbody>
-                {loading ? (
-                    <tr><td colSpan="7" style={{textAlign: 'center', padding: '20px'}}>Đang tải dữ liệu...</td></tr>
-                ) : allOrders.length === 0 ? (
-                    <tr><td colSpan="7" style={{textAlign: 'center', padding: '20px', color: '#848E9C'}}>Không có lệnh nào đang mở.</td></tr>
-                ) : (
-                    allOrders.map((order) => (
-                        <tr key={order.order_id}>
-                            <td style={{color: '#848E9C', fontSize: '13px'}}>{formatTime(order.timestamp)}</td>
-                            <td style={{fontWeight: '600', color: '#EAECEF'}}>{order.username}</td>
-                            <td style={{color: '#F0B90B'}}>{order.symbol}</td>
+                {isLoading && <tr><td colSpan="10" style={{textAlign: 'center', padding: '20px'}}>Connecting...</td></tr>}
+
+                {!isLoading && displayData.length === 0 && (
+                    <tr><td colSpan="10" className="empty-cell">No Data</td></tr>
+                )}
+
+                {displayData.map((item, idx) => (
+                    // KEY LÀ QUAN TRỌNG NHẤT ĐỂ KHÔNG BỊ LỖI RENDER
+                    // Dùng activeTab trong key để ép React vẽ lại hàng mới hoàn toàn khi đổi tab
+                    <tr key={`${activeTab}-${item.order_id || item.trade_id || idx}`}>
+                        <td style={{color: '#848E9C', fontSize: '13px'}}>{formatTime(item.time)}</td>
+                        <td style={{fontWeight: '600', color: '#EAECEF'}}>{item.username || item.user_id}</td>
+                        <td style={{color: '#F0B90B'}}>{item.symbol}</td>
+                        <td>{renderSide(item.side)}</td>
+                        <td className="font-mono text-right">{formatPrice(item.price)}</td>
+                        <td className="font-mono text-right">{item.amount}</td>
+
+                        {activeTab !== 'trades' && (
                             <td>
                                 <span style={{
-                                    color: order.side === 'buy' ? '#0ECB81' : '#F6465D',
-                                    fontWeight: 'bold', textTransform: 'uppercase'
+                                    color: item.status === 'FILLED' ? '#0ECB81' : 
+                                           item.status === 'CANCELLED' ? '#F6465D' : '#EAECEF'
                                 }}>
-                                    {order.side}
+                                    {item.status || 'NEW'}
                                 </span>
                             </td>
-                            <td style={{textAlign: 'right', fontFamily: 'monospace'}}>{formatPrice(order.price)}</td>
-                            <td style={{textAlign: 'right', fontFamily: 'monospace'}}>{order.amount}</td>
-                            <td className="action-cell" style={{textAlign: 'center'}}>
-                                <button 
-                                    className="btn-delete"
-                                    onClick={() => handleCancelOrder(order.order_id, order.user_id)}
-                                    title="Hủy lệnh này"
-                                >
-                                    Hủy Lệnh
+                        )}
+
+                        {activeTab === 'history' && <td className="font-mono text-right">{item.filled || 0}</td>}
+                        
+                        {activeTab === 'open' && (
+                            <td className="action-cell text-center">
+                                <button className="btn-delete" onClick={() => handleCancelOrder(item.order_id, item.user_id)}>
+                                    Hủy
                                 </button>
                             </td>
-                        </tr>
-                    ))
-                )}
+                        )}
+                    </tr>
+                ))}
               </tbody>
           </table>
         </div>
-
       </div>
     </div>
   );
