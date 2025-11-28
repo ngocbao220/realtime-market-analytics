@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { api } from '../api/client';
+
 import { 
     createChart, 
     ColorType, 
@@ -195,8 +197,12 @@ const TradingChart = ({ symbol = "BTCUSDT" }) => {
   // --- WEBSOCKET DATA ---
   useEffect(() => {
     setIsLoading(true);
-    const WS_URL = `ws://localhost:8000/ws/klines/${symbol}?interval=${interval}&limit=500`;
-    const ws = new WebSocket(WS_URL);
+
+    const endpoint = `/ws/klines/${symbol}?interval=${interval}&limit=500`;
+    const socketUrl = api.getWebSocketUrl(endpoint);
+        
+    const ws = new WebSocket(socketUrl);
+
     wsRef.current = ws;
 
     ws.onopen = () => console.log(`Connected to Klines WS: ${interval}`);

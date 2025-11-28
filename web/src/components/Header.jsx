@@ -90,7 +90,7 @@ const Header = () => {
           onClick={() => navigate(isAdmin ? "/admin" : "/dashboard")} 
           style={{cursor: 'pointer'}}
         >
-          BINANCE
+          CRYPTO DASHBOARD
         </div>
         <nav className="nav-menu">
           <a href="#" className="nav-link">Markets</a>
